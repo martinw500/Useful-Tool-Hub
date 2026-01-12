@@ -36,8 +36,8 @@ async function fetchInstagramMedia(url) {
     try {
         console.log('Fetching from backend...');
         
-        // Call the local backend
-        const response = await fetch(`http://localhost:5000/api/instagram?url=${encodeURIComponent(url)}`);
+        // Call the backend (uses config.js to determine URL)
+        const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/instagram?url=${encodeURIComponent(url)}`);
         
         if (!response.ok) {
             const errorData = await response.json();
@@ -82,9 +82,8 @@ function displayMedia(mediaArray) {
         imageItem.className = 'image-item';
 
         const img = document.createElement('img');
-        // Proxy the image through backend to avoid CORS
-        const imageUrl = media.thumbnail || media.url_low;
-        img.src = `http://localhost:5000/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+        // Use the base64 thumbnail from backend
+        img.src = media.thumbnail;
         img.alt = `Instagram image ${index + 1}`;
         img.loading = 'lazy';
 

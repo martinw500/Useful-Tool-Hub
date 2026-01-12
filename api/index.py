@@ -6,7 +6,7 @@ import base64
 import re
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=["https://martinw500.github.io", "http://localhost:8000"])
 
 # Create an Instaloader instance
 L = instaloader.Instaloader()
@@ -125,8 +125,6 @@ def get_instagram():
 @app.route('/api/proxy-image', methods=['GET'])
 def proxy_image():
     """Proxy Instagram images to avoid CORS issues"""
-    import requests
-    
     image_url = request.args.get('url')
     if not image_url:
         return jsonify({'error': 'URL parameter required'}), 400
@@ -150,6 +148,6 @@ def proxy_image():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-if __name__ == '__main__':
-    print('Backend running on http://localhost:5000')
-    app.run(debug=True, port=5000)
+# Vercel expects the app to be exported
+def handler(request, context):
+    return app(request, context)
