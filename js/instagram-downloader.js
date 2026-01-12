@@ -33,67 +33,102 @@ async function fetchInstagramMedia(url) {
     fetchBtn.disabled = true;
 
     try {
-        // Add ?__a=1&__d=dis to get JSON response
+        // Extract shortcode from URL
         const shortcode = url.match(/\/(p|reel)\/([A-Za-z0-9_-]+)/)[2];
-        const apiUrl = `https://www.instagram.com/p/${shortcode}/?__a=1&__d=dis`;
         
-        // Use CORS proxy to bypass CORS restrictions
-        const corsProxy = 'https://api.allorigins.win/raw?url=';
-        const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
+        // Fetch the Instagram page HTML through CORS proxy
+        const corsProxy = 'https://api.allorigins.win/get?url=';
+        const instagramUrl = `https://www.instagram.com/p/${shortcode}/`;
+        const response = await fetch(corsProxy + encodeURIComponent(instagramUrl));
         
         if (!response.ok) {
-            throw new Error('Failed to fetch Instagram data');
+            throw new Error('Failed to fetch Instagram page');
         }
 
         const data = await response.json();
+        const html = data.contents;
         
-        // Extract media from the response
-        const media = [];
-        const items = data?.items?.[0];
+        // Extract JSON data from the page HTML
+        // Instagram embeds data in <script type="application/ld+json"> or window._sharedData
+        let jsonData = null;
         
-        if (!items) {
-            throw new Error('Could not find post data. The post might be private.');
+        // Try to find the JSON in script tags
+        const scriptMatch = html.match(/<script type="application\/ld\+json">({.*?})<\/script>/);
+        if (scriptMatch) {
+            jsonData = JSON.parse(scriptMatch[1]);
+        } else {
+            // Try alternative method - look for window._sharedData
+            const sharedDataMatch = html.match(/window\._sharedData = ({.*?});<\/script>/);
+            if (sharedDataMatch) {
+                jsonData = JSON.parse(sharedDataMatch[1]);
+            }
         }
 
-        // Check if it's a carousel (multiple images)
-        if (items.carousel_media) {
-            items.carousel_media.forEach(item => {
-                if (item.image_versions2?.candidates) {
-                    const candidates = item.image_versions2.candidates;
-                    media.push({
-                        type: 'image',
-                        url_high: candidates[0].url,
-                        url_low: candidates[candidates.length - 1].url,
-                        thumbnail: candidates[candidates.length - 1].url
-                    });
-                } else if (item.video_versions) {
-                    media.push({
-                        type: 'video',
-                        url_high: item.video_versions[0].url,
-                        url_low: item.video_versions[item.video_versions.length - 1].url,
-                        thumbnail: item.image_versions2?.candidates?.[0]?.url || ''
-                    });
-                }
-            });
-        } 
-        // Single image
-        else if (items.image_versions2?.candidates) {
-            const candidates = items.image_versions2.candidates;
+        if (!jsonData) {
+            throw new Error('Could not extract post data. The post might be private or Instagram changed their page structure.');
+        }
+
+        // Extract media URLs from the JSON
+        const media = [];
+        
+        // Check if it's ld+json format
+        if (jsonData.image) {
             media.push({
                 type: 'image',
-                url_high: candidates[0].url,
-                url_low: candidates[candidates.length - 1].url,
-                thumbnail: candidates[candidates.length - 1].url
+                url_high: jsonData.image,
+                url_low: jsonData.image,
+                thumbnail: jsonData.image
             });
-        }
-        // Single video
-        else if (items.video_versions) {
+        } else if (jsonData.video) {
             media.push({
                 type: 'video',
-                url_high: items.video_versions[0].url,
-                url_low: items.video_versions[items.video_versions.length - 1].url,
-                thumbnail: items.image_versions2?.candidates?.[0]?.url || ''
+                url_high: jsonData.video[0].contentUrl,
+                url_low: jsonData.video[0].contentUrl,
+                thumbnail: jsonData.video[0].thumbnailUrl
             });
+        }
+        // Check sharedData format
+        else if (jsonData.entry_data?.PostPage?.[0]?.graphql?.shortcode_media) {
+            const postData = jsonData.entry_data.PostPage[0].graphql.shortcode_media;
+            
+            if (postData.edge_sidecar_to_children) {
+                // Multiple images/videos
+                postData.edge_sidecar_to_children.edges.forEach(edge => {
+                    const node = edge.node;
+                    if (node.is_video) {
+                        media.push({
+                            type: 'video',
+                            url_high: node.video_url,
+                            url_low: node.video_url,
+                            thumbnail: node.display_url
+                        });
+                    } else {
+                        media.push({
+                            type: 'image',
+                            url_high: node.display_url,
+                            url_low: node.display_url,
+                            thumbnail: node.display_url
+                        });
+                    }
+                });
+            } else {
+                // Single image/video
+                if (postData.is_video) {
+                    media.push({
+                        type: 'video',
+                        url_high: postData.video_url,
+                        url_low: postData.video_url,
+                        thumbnail: postData.display_url
+                    });
+                } else {
+                    media.push({
+                        type: 'image',
+                        url_high: postData.display_url,
+                        url_low: postData.display_url,
+                        thumbnail: postData.display_url
+                    });
+                }
+            }
         }
 
         if (media.length === 0) {
