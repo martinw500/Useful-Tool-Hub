@@ -1,1 +1,21 @@
+# Vercel
 .vercel
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Debug files
+debug*.html
+debug*.json
+test_*.ico
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
