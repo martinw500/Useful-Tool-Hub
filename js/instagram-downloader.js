@@ -143,28 +143,34 @@ function updateDownloadButtons() {
 // Download single file
 async function downloadFile(url, filename) {
     try {
-        // Fetch the image
-        const response = await fetch(url);
-        const blob = await response.blob();
+        // If it's a base64 data URL, use it directly
+        if (url.startsWith('data:')) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => document.body.removeChild(a), 100);
+            return true;
+        }
         
-        // Create download link
-        const blobUrl = URL.createObjectURL(blob);
+        // For Instagram URLs, we need to convert to blob to download
+        // Use a proxy or fetch with no-cors won't work, so open in new tab as fallback
         const a = document.createElement('a');
-        a.href = blobUrl;
+        a.href = url;
         a.download = filename;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
-        
-        // Cleanup
-        setTimeout(() => {
-            document.body.removeChild(a);
-            URL.revokeObjectURL(blobUrl);
-        }, 100);
-        
+        setTimeout(() => document.body.removeChild(a), 100);
         return true;
     } catch (error) {
         console.error('Download failed:', error);
+        // Fallback: open in new tab
+        window.open(url, '_blank');
         return false;
     }
 }
@@ -207,7 +213,7 @@ async function downloadAll(quality) {
     if (successCount === indicesToDownload.length) {
         console.log(`Successfully downloaded ${successCount} file(s)`);
     } else {
-        showError(`Downloaded ${successCount} of ${indicesToDownload.length} files`);
+        showError(`Downloaded ${successCount} of ${indicesToDownload.length} files. Some files opened in new tabs due to browser restrictions.`);
     }
 }
 
