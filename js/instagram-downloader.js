@@ -20,9 +20,10 @@ function isValidInstagramUrl(url) {
 function showError(message) {
     errorMsg.textContent = message;
     errorMsg.classList.add('active');
+    console.error('Error:', message);
     setTimeout(() => {
         errorMsg.classList.remove('active');
-    }, 5000);
+    }, 8000);
 }
 
 // Fetch Instagram media by scraping
@@ -36,17 +37,44 @@ async function fetchInstagramMedia(url) {
         // Extract shortcode from URL
         const shortcode = url.match(/\/(p|reel)\/([A-Za-z0-9_-]+)/)[2];
         
-        // Fetch the Instagram page HTML through CORS proxy
-        const corsProxy = 'https://api.allorigins.win/get?url=';
-        const instagramUrl = `https://www.instagram.com/p/${shortcode}/`;
-        const response = await fetch(corsProxy + encodeURIComponent(instagramUrl));
+        // Try multiple CORS proxies in case one fails
+        const corsProxies = [
+            'https://api.allorigins.win/get?url=',
+            'https://corsproxy.io/?',
+            'https://api.codetabs.com/v1/proxy?quest='
+        ];
         
-        if (!response.ok) {
-            throw new Error('Failed to fetch Instagram page');
-        }
+        const instagramUrl = `https://www.instagram.com/p/${shortcode}/`;
+        let html = null;
+        let lastError = null;
+        
+        // Try each proxy
+        for (const proxy of corsProxies) {
+            try {
+                console.log('Trying proxy:', proxy);
+                const response = await fetch(proxy + encodeURIComponent(instagramUrl));
+                
+                if (!response.ok) {
+                    throw new Error(`Proxy responded with status: ${response.status}`);
+                }
 
-        const data = await response.json();
-        const html = data.contents;
+                const data = await response.json();
+                html = data.contents || data;
+                
+                if (html) {
+                    console.log('Successfully fetched using:', proxy);
+                    break;
+                }
+            } catch (err) {
+                console.error('Proxy failed:', proxy, err);
+                lastError = err;
+                continue;
+            }
+        }
+        
+        if (!html) {
+            throw new Error('All CORS proxies failed. Please make sure you\'re running a local server (not file://) or try again later.');
+        }
         
         // Extract JSON data from the page HTML
         // Instagram embeds data in <script type="application/ld+json"> or window._sharedData
