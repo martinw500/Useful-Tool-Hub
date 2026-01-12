@@ -70,6 +70,32 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* Search Bar */
+.search-container {
+    margin-bottom: 24px;
+}
+
+.search-bar {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.search-bar:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.search-bar::placeholder {
+    color: var(--text-secondary);
+}
+
 /* Links List */
 .links-list {
     display: flex;

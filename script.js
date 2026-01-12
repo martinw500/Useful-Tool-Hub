@@ -12,6 +12,26 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
+// Search functionality
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const linkItems = document.querySelectorAll('.link-item');
+        
+        linkItems.forEach(item => {
+            const title = item.querySelector('.link-title').textContent.toLowerCase();
+            const description = item.querySelector('.link-description').textContent.toLowerCase();
+            
+            if (title.includes(searchTerm) || description.includes(searchTerm)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+}
+
 // Tool link click handlers (placeholders for future functionality)
 document.querySelectorAll('.link-item a').forEach(link => {
     link.addEventListener('click', function(e) {

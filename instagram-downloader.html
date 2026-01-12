@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Image Downloader - Useful Tool Hub</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .tool-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: var(--primary-color);
+            text-decoration: none;
+            margin-bottom: 24px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--primary-hover);
+        }
+
+        .tool-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
+        .tool-card h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .tool-card .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+        }
+
+        .notice {
+            background: rgba(96, 165, 250, 0.1);
+            border: 1px solid var(--primary-color);
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px 16px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 24px;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .image-item {
+            position: relative;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            background: var(--bg-color);
+        }
+
+        .image-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .image-number {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .download-section {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .download-section h3 {
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .download-options {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .download-btn {
+            padding: 10px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .download-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .download-btn.secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .download-btn.secondary:hover {
+            background: var(--border-color);
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            border-radius: 6px;
+            padding: 12px 16px;
+            color: #fca5a5;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="site-title">Useful Tool Hub</h1>
+            <p class="site-subtitle">Instagram Image Downloader</p>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container tool-container">
+            <a href="index.html" class="back-link">← Back to Home</a>
+            
+            <div class="tool-card">
+                <h1>📷 Instagram Image Downloader</h1>
+                <p class="subtitle">Download images and videos from public Instagram posts</p>
+
+                <div class="notice">
+                    ℹ️ Note: Only public Instagram posts can be downloaded. Private accounts or posts are not accessible.
+                </div>
+
+                <div class="input-group">
+                    <label for="instagramUrl">Instagram Post URL</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="url" 
+                            id="instagramUrl" 
+                            placeholder="https://www.instagram.com/p/..."
+                            autocomplete="off"
+                        >
+                        <button class="btn" id="fetchBtn">Fetch</button>
+                    </div>
+                </div>
+
+                <div class="error" id="errorMsg"></div>
+
+                <div class="loading" id="loading">
+                    <p>⏳ Fetching media from Instagram...</p>
+                </div>
+
+                <div class="results" id="results">
+                    <div class="image-grid" id="imageGrid"></div>
+                    
+                    <div class="download-section">
+                        <h3>Download Options</h3>
+                        <div class="download-options">
+                            <button class="download-btn" id="downloadHighBtn">
+                                Download All (High Quality)
+                            </button>
+                            <button class="download-btn secondary" id="downloadLowBtn">
+                                Download All (Lower Quality)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p><a href="feedback.html">Made with ❤</a> | © 2026 Useful Tool Hub</p>
+        </div>
+    </footer>
+
+    <script src="js/instagram-downloader.js"></script>
+</body>
+</html>
