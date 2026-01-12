@@ -9,6 +9,7 @@ const downloadHighBtn = document.getElementById('downloadHighBtn');
 const downloadLowBtn = document.getElementById('downloadLowBtn');
 
 let currentMedia = [];
+let selectedIndices = new Set(); // Track selected images
 
 // Validate Instagram URL
 function isValidInstagramUrl(url) {
@@ -75,11 +76,29 @@ async function simulateFetch(url) {
 // Display media in grid
 function displayMedia(mediaArray) {
     currentMedia = mediaArray;
+    selectedIndices.clear(); // Reset selections
     imageGrid.innerHTML = '';
 
     mediaArray.forEach((media, index) => {
         const imageItem = document.createElement('div');
         imageItem.className = 'image-item';
+        imageItem.dataset.index = index;
+
+        // Add checkbox for selection
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'image-checkbox';
+        checkbox.dataset.index = index;
+        checkbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                selectedIndices.add(index);
+                imageItem.classList.add('selected');
+            } else {
+                selectedIndices.delete(index);
+                imageItem.classList.remove('selected');
+            }
+            updateDownloadButtons();
+        });
 
         const img = document.createElement('img');
         // Use the base64 thumbnail from backend
@@ -87,10 +106,17 @@ function displayMedia(mediaArray) {
         img.alt = `Instagram image ${index + 1}`;
         img.loading = 'lazy';
 
+        // Make image clickable to toggle selection
+        img.addEventListener('click', () => {
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change'));
+        });
+
         const imageNumber = document.createElement('div');
         imageNumber.className = 'image-number';
         imageNumber.textContent = `${index + 1}/${mediaArray.length}`;
 
+        imageItem.appendChild(checkbox);
         imageItem.appendChild(img);
         imageItem.appendChild(imageNumber);
         imageGrid.appendChild(imageItem);
@@ -99,50 +125,89 @@ function displayMedia(mediaArray) {
     loading.classList.remove('active');
     results.classList.add('active');
     fetchBtn.disabled = false;
+    updateDownloadButtons();
+}
+
+// Update download button text based on selection
+function updateDownloadButtons() {
+    const count = selectedIndices.size;
+    if (count === 0) {
+        downloadHighBtn.textContent = `Download All (High Quality)`;
+        downloadLowBtn.textContent = `Download All (Lower Quality)`;
+    } else {
+        downloadHighBtn.textContent = `Download Selected (${count}) - High Quality`;
+        downloadLowBtn.textContent = `Download Selected (${count}) - Lower Quality`;
+    }
 }
 
 // Download single file
 async function downloadFile(url, filename) {
     try {
-        // Use fetch with CORS mode
-        const response = await fetch(url, { mode: 'cors' });
+        // Fetch the image
+        const response = await fetch(url);
         const blob = await response.blob();
+        
+        // Create download link
         const blobUrl = URL.createObjectURL(blob);
-
         const a = document.createElement('a');
         a.href = blobUrl;
         a.download = filename;
+        a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
+        
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+        }, 100);
+        
+        return true;
     } catch (error) {
         console.error('Download failed:', error);
-        // If CORS fails, open in new tab
-        window.open(url, '_blank');
+        return false;
     }
 }
 
-// Download all files
+// Download all or selected files
 async function downloadAll(quality) {
     if (currentMedia.length === 0) {
         showError('No media to download');
         return;
     }
 
+    // Determine which images to download
+    const indicesToDownload = selectedIndices.size > 0 
+        ? Array.from(selectedIndices).sort((a, b) => a - b)
+        : currentMedia.map((_, i) => i);
+
+    if (indicesToDownload.length === 0) {
+        showError('No images selected');
+        return;
+    }
+
     const urlKey = quality === 'high' ? 'url_high' : 'url_low';
+    let successCount = 0;
     
-    for (let i = 0; i < currentMedia.length; i++) {
-        const media = currentMedia[i];
+    for (let i = 0; i < indicesToDownload.length; i++) {
+        const index = indicesToDownload[i];
+        const media = currentMedia[index];
         const extension = media.type === 'video' ? 'mp4' : 'jpg';
-        const filename = `instagram_${quality}_${i + 1}.${extension}`;
+        const filename = `instagram_${quality}_${index + 1}.${extension}`;
         
-        await downloadFile(media[urlKey], filename);
+        const success = await downloadFile(media[urlKey], filename);
+        if (success) successCount++;
         
-        // Small delay between downloads
-        if (i < currentMedia.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 500));
+        // Small delay between downloads to avoid overwhelming the browser
+        if (i < indicesToDownload.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
+    }
+
+    if (successCount === indicesToDownload.length) {
+        console.log(`Successfully downloaded ${successCount} file(s)`);
+    } else {
+        showError(`Downloaded ${successCount} of ${indicesToDownload.length} files`);
     }
 }
 

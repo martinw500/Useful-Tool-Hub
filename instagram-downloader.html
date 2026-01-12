@@ -138,12 +138,37 @@
             border-radius: 8px;
             overflow: hidden;
             background: var(--bg-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .image-item:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .image-item.selected {
+            border-color: var(--primary-color);
+            border-width: 3px;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+        }
+
+        .image-checkbox {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            z-index: 10;
+            accent-color: var(--primary-color);
         }
 
         .image-item img {
             width: 100%;
             height: auto;
             display: block;
+            cursor: pointer;
         }
 
         .image-number {
