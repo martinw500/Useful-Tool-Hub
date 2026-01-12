@@ -143,25 +143,9 @@ function updateDownloadButtons() {
 // Download single file
 async function downloadFile(url, filename) {
     try {
-        // If it's a base64 data URL, use it directly
-        if (url.startsWith('data:')) {
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => document.body.removeChild(a), 100);
-            return true;
-        }
-        
-        // For Instagram URLs, we need to convert to blob to download
-        // Use a proxy or fetch with no-cors won't work, so open in new tab as fallback
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
@@ -169,8 +153,6 @@ async function downloadFile(url, filename) {
         return true;
     } catch (error) {
         console.error('Download failed:', error);
-        // Fallback: open in new tab
-        window.open(url, '_blank');
         return false;
     }
 }
@@ -192,29 +174,25 @@ async function downloadAll(quality) {
         return;
     }
 
-    const urlKey = quality === 'high' ? 'url_high' : 'url_low';
     let successCount = 0;
     
     for (let i = 0; i < indicesToDownload.length; i++) {
         const index = indicesToDownload[i];
         const media = currentMedia[index];
         const extension = media.type === 'video' ? 'mp4' : 'jpg';
-        const filename = `instagram_${quality}_${index + 1}.${extension}`;
+        const filename = `instagram_${index + 1}.${extension}`;
         
-        const success = await downloadFile(media[urlKey], filename);
+        // Use the base64 thumbnail which downloads directly
+        const success = await downloadFile(media.thumbnail, filename);
         if (success) successCount++;
         
-        // Small delay between downloads to avoid overwhelming the browser
+        // Small delay between downloads
         if (i < indicesToDownload.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise(resolve => setTimeout(resolve, 200));
         }
     }
 
-    if (successCount === indicesToDownload.length) {
-        console.log(`Successfully downloaded ${successCount} file(s)`);
-    } else {
-        showError(`Downloaded ${successCount} of ${indicesToDownload.length} files. Some files opened in new tabs due to browser restrictions.`);
-    }
+    console.log(`Downloaded ${successCount} of ${indicesToDownload.length} files`);
 }
 
 // Event listeners
