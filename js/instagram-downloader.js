@@ -26,7 +26,7 @@ function showError(message) {
     }, 8000);
 }
 
-// Fetch Instagram media by scraping
+// Fetch Instagram media via backend
 async function fetchInstagramMedia(url) {
     loading.classList.add('active');
     results.classList.remove('active');
@@ -34,140 +34,34 @@ async function fetchInstagramMedia(url) {
     fetchBtn.disabled = true;
 
     try {
-        // Extract shortcode from URL
-        const shortcode = url.match(/\/(p|reel)\/([A-Za-z0-9_-]+)/)[2];
+        console.log('Fetching from backend...');
         
-        // Try multiple CORS proxies in case one fails
-        const corsProxies = [
-            'https://api.allorigins.win/get?url=',
-            'https://corsproxy.io/?',
-            'https://api.codetabs.com/v1/proxy?quest='
-        ];
+        // Call the local backend
+        const response = await fetch(`http://localhost:5000/api/instagram?url=${encodeURIComponent(url)}`);
         
-        const instagramUrl = `https://www.instagram.com/p/${shortcode}/`;
-        let html = null;
-        let lastError = null;
-        
-        // Try each proxy
-        for (const proxy of corsProxies) {
-            try {
-                console.log('Trying proxy:', proxy);
-                const response = await fetch(proxy + encodeURIComponent(instagramUrl));
-                
-                if (!response.ok) {
-                    throw new Error(`Proxy responded with status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                html = data.contents || data;
-                
-                if (html) {
-                    console.log('Successfully fetched using:', proxy);
-                    break;
-                }
-            } catch (err) {
-                console.error('Proxy failed:', proxy, err);
-                lastError = err;
-                continue;
-            }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch Instagram media');
         }
         
-        if (!html) {
-            throw new Error('All CORS proxies failed. Please make sure you\'re running a local server (not file://) or try again later.');
-        }
+        const data = await response.json();
         
-        // Extract JSON data from the page HTML
-        // Instagram embeds data in <script type="application/ld+json"> or window._sharedData
-        let jsonData = null;
-        
-        // Try to find the JSON in script tags
-        const scriptMatch = html.match(/<script type="application\/ld\+json">({.*?})<\/script>/);
-        if (scriptMatch) {
-            jsonData = JSON.parse(scriptMatch[1]);
-        } else {
-            // Try alternative method - look for window._sharedData
-            const sharedDataMatch = html.match(/window\._sharedData = ({.*?});<\/script>/);
-            if (sharedDataMatch) {
-                jsonData = JSON.parse(sharedDataMatch[1]);
-            }
-        }
-
-        if (!jsonData) {
-            throw new Error('Could not extract post data. The post might be private or Instagram changed their page structure.');
-        }
-
-        // Extract media URLs from the JSON
-        const media = [];
-        
-        // Check if it's ld+json format
-        if (jsonData.image) {
-            media.push({
-                type: 'image',
-                url_high: jsonData.image,
-                url_low: jsonData.image,
-                thumbnail: jsonData.image
-            });
-        } else if (jsonData.video) {
-            media.push({
-                type: 'video',
-                url_high: jsonData.video[0].contentUrl,
-                url_low: jsonData.video[0].contentUrl,
-                thumbnail: jsonData.video[0].thumbnailUrl
-            });
-        }
-        // Check sharedData format
-        else if (jsonData.entry_data?.PostPage?.[0]?.graphql?.shortcode_media) {
-            const postData = jsonData.entry_data.PostPage[0].graphql.shortcode_media;
-            
-            if (postData.edge_sidecar_to_children) {
-                // Multiple images/videos
-                postData.edge_sidecar_to_children.edges.forEach(edge => {
-                    const node = edge.node;
-                    if (node.is_video) {
-                        media.push({
-                            type: 'video',
-                            url_high: node.video_url,
-                            url_low: node.video_url,
-                            thumbnail: node.display_url
-                        });
-                    } else {
-                        media.push({
-                            type: 'image',
-                            url_high: node.display_url,
-                            url_low: node.display_url,
-                            thumbnail: node.display_url
-                        });
-                    }
-                });
-            } else {
-                // Single image/video
-                if (postData.is_video) {
-                    media.push({
-                        type: 'video',
-                        url_high: postData.video_url,
-                        url_low: postData.video_url,
-                        thumbnail: postData.display_url
-                    });
-                } else {
-                    media.push({
-                        type: 'image',
-                        url_high: postData.display_url,
-                        url_low: postData.display_url,
-                        thumbnail: postData.display_url
-                    });
-                }
-            }
-        }
-
-        if (media.length === 0) {
+        if (!data.success || !data.media || data.media.length === 0) {
             throw new Error('No media found in this post');
         }
-
-        displayMedia(media);
+        
+        console.log('Found media:', data.media.length);
+        displayMedia(data.media);
 
     } catch (error) {
         console.error('Error fetching Instagram media:', error);
-        showError(error.message || 'Failed to fetch Instagram media. The post might be private or the URL is invalid.');
+        
+        if (error.message.includes('Failed to fetch')) {
+            showError('Backend not running! Start the backend with: python backend.py');
+        } else {
+            showError(error.message || 'Failed to fetch Instagram media. The post might be private or unavailable.');
+        }
+        
         loading.classList.remove('active');
         fetchBtn.disabled = false;
     }
@@ -188,7 +82,9 @@ function displayMedia(mediaArray) {
         imageItem.className = 'image-item';
 
         const img = document.createElement('img');
-        img.src = media.thumbnail || media.url_low;
+        // Proxy the image through backend to avoid CORS
+        const imageUrl = media.thumbnail || media.url_low;
+        img.src = `http://localhost:5000/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
         img.alt = `Instagram image ${index + 1}`;
         img.loading = 'lazy';
 
