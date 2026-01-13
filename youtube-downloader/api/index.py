@@ -6,7 +6,7 @@ import sys
 import traceback
 
 app = Flask(__name__)
-CORS(app, origins=["*"])
+CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type"]}})
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -36,8 +36,12 @@ def root():
         }
     }), 200
 
-@app.route('/api/youtube', methods=['GET'])
+@app.route('/api/youtube', methods=['GET', 'OPTIONS'])
 def get_youtube():
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     url = request.args.get('url')
     
     if not url:

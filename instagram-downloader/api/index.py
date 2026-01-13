@@ -6,7 +6,7 @@ import base64
 import re
 
 app = Flask(__name__)
-CORS(app, origins=["*"])  # Allow all origins for testing
+CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type"]}})
 
 # Create an Instaloader instance
 L = instaloader.Instaloader()
@@ -27,8 +27,12 @@ def fetch_image_as_base64(url):
         print(f'Failed to fetch image as base64: {e}')
     return None
 
-@app.route('/api/instagram', methods=['GET'])
+@app.route('/api/instagram', methods=['GET', 'OPTIONS'])
 def get_instagram():
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     url = request.args.get('url')
     
     if not url:
