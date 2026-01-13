@@ -5,8 +5,8 @@ const loading = document.getElementById('loading');
 const results = document.getElementById('results');
 const imageGrid = document.getElementById('imageGrid');
 const errorMsg = document.getElementById('errorMsg');
-const downloadHighBtn = document.getElementById('downloadHighBtn');
-const downloadLowBtn = document.getElementById('downloadLowBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const formatSelect = document.getElementById('formatSelect');
 
 let currentMedia = [];
 let selectedIndices = new Set(); // Track selected images
@@ -128,21 +128,55 @@ function displayMedia(mediaArray) {
 
 // Update download button text based on selection
 function updateDownloadButtons() {
+    if (!downloadBtn) return; // Guard against null
+    
     const count = selectedIndices.size;
     if (count === 0) {
-        downloadHighBtn.textContent = `Download All (High Quality)`;
-        downloadLowBtn.textContent = `Download All (Lower Quality)`;
+        downloadBtn.textContent = `Download Selected (0)`;
     } else {
-        downloadHighBtn.textContent = `Download Selected (${count}) - High Quality`;
-        downloadLowBtn.textContent = `Download Selected (${count}) - Lower Quality`;
+        downloadBtn.textContent = `Download Selected (${count})`;
     }
 }
 
+// Convert base64 image to different format
+async function convertImageFormat(base64Data, format) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            
+            // Convert to selected format
+            const mimeType = format === 'png' ? 'image/png' : format === 'webp' ? 'image/webp' : 'image/jpeg';
+            const quality = format === 'jpg' ? 0.95 : undefined;
+            
+            canvas.toBlob((blob) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            }, mimeType, quality);
+        };
+        img.onerror = reject;
+        img.src = base64Data;
+    });
+}
+
 // Download single file
-async function downloadFile(url, filename) {
+async function downloadFile(base64Data, filename, format) {
     try {
+        let downloadData = base64Data;
+        
+        // Convert format if needed
+        if (format !== 'jpg' || !base64Data.includes('image/jpeg')) {
+            downloadData = await convertImageFormat(base64Data, format);
+        }
+        
         const a = document.createElement('a');
-        a.href = url;
+        a.href = downloadData;
         a.download = filename;
         a.style.display = 'none';
         document.body.appendChild(a);
@@ -156,37 +190,36 @@ async function downloadFile(url, filename) {
 }
 
 // Download all or selected files
-async function downloadAll(quality) {
+async function downloadAll() {
     if (currentMedia.length === 0) {
         showError('No media to download');
         return;
     }
 
-    // Determine which images to download
-    const indicesToDownload = selectedIndices.size > 0 
-        ? Array.from(selectedIndices).sort((a, b) => a - b)
-        : currentMedia.map((_, i) => i);
-
-    if (indicesToDownload.length === 0) {
-        showError('No images selected');
+    // Only download selected images
+    if (selectedIndices.size === 0) {
+        showError('Please select images to download by clicking on them');
         return;
     }
 
+    const indicesToDownload = Array.from(selectedIndices).sort((a, b) => a - b);
+    const format = formatSelect.value;
     let successCount = 0;
     
     for (let i = 0; i < indicesToDownload.length; i++) {
         const index = indicesToDownload[i];
         const media = currentMedia[index];
-        const extension = media.type === 'video' ? 'mp4' : 'jpg';
-        const filename = `instagram_${index + 1}.${extension}`;
+        const filename = `instagram_${index + 1}.${format}`;
+        
+        console.log(`Downloading ${filename}...`);
         
         // Use the base64 thumbnail which downloads directly
-        const success = await downloadFile(media.thumbnail, filename);
+        const success = await downloadFile(media.thumbnail, filename, format);
         if (success) successCount++;
         
         // Small delay between downloads
         if (i < indicesToDownload.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
     }
 
@@ -218,7 +251,6 @@ instagramUrlInput.addEventListener('keypress', (e) => {
 });
 
 // Download button handlers
-downloadHighBtn.addEventListener('click', () => downloadAll('high'));
-downloadLowBtn.addEventListener('click', () => downloadAll('low'));
+downloadBtn.addEventListener('click', () => downloadAll());
 
 console.log('Instagram Downloader initialized! 📷');

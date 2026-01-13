@@ -197,7 +197,46 @@
         .download-options {
             display: flex;
             gap: 12px;
+            align-items: center;
             flex-wrap: wrap;
+        }
+
+        .format-select {
+            padding: 10px 16px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            padding-right: 36px;
+            background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="%2360a5fa" d="M6 9L1 4h10z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 12px;
+        }
+
+        .format-select option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .format-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+        }
+
+        .format-select:hover {
+            border-color: var(--primary-color);
         }
 
         .download-btn {
@@ -285,12 +324,14 @@
                     <div class="download-section">
                         <h3>Download Options</h3>
                         <div class="download-options">
-                            <button class="download-btn" id="downloadHighBtn">
-                                Download All (High Quality)
+                            <button class="download-btn" id="downloadBtn">
+                                Download All
                             </button>
-                            <button class="download-btn secondary" id="downloadLowBtn">
-                                Download All (Lower Quality)
-                            </button>
+                            <select class="format-select" id="formatSelect">
+                                <option value="jpg">JPG</option>
+                                <option value="png">PNG</option>
+                                <option value="webp">WebP</option>
+                            </select>
                         </div>
                     </div>
                 </div>
