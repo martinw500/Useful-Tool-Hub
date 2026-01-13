@@ -6,7 +6,7 @@ import base64
 import re
 
 app = Flask(__name__)
-CORS(app, origins=["https://martinw500.github.io", "http://localhost:8000"])
+CORS(app, origins=["*"])  # Allow all origins for testing
 
 # Create an Instaloader instance
 L = instaloader.Instaloader()
@@ -147,6 +147,3 @@ def proxy_image():
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-# Export app for Vercel
-app = app
