@@ -2,9 +2,19 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
 import re
+import sys
+import traceback
 
 app = Flask(__name__)
 CORS(app, origins=["*"])
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({
+        'status': 'ok',
+        'python_version': sys.version,
+        'yt_dlp_available': True
+    }), 200
 
 @app.route('/', methods=['GET'])
 @app.route('/api/youtube', methods=['GET'])
@@ -109,10 +119,11 @@ def get_youtube():
             return jsonify(video_data)
         
     except Exception as e:
-        print(f'Error: {type(e).__name__}: {str(e)}')
-        return jsonify({'error': f'Failed to fetch video: {str(e)}'}), 500
-
-# Vercel serverless function handler
-def handler(request):
-    with app.request_context(request.environ):
-        return app.full_dispatch_request()
+        error_msg = f'{type(e).__name__}: {str(e)}'
+        print(f'Error: {error_msg}')
+        print(f'Traceback: {traceback.format_exc()}')
+        return jsonify({
+            'error': f'Failed to fetch video: {str(e)}',
+            'error_type': type(e).__name__,
+            'traceback': traceback.format_exc()
+        }), 500
