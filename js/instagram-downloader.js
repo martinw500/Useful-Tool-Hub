@@ -7,6 +7,9 @@ const imageGrid = document.getElementById('imageGrid');
 const errorMsg = document.getElementById('errorMsg');
 const downloadBtn = document.getElementById('downloadBtn');
 const formatSelect = document.getElementById('formatSelect');
+const videoFormatSelect = document.getElementById('videoFormatSelect');
+const imageFormatGroup = document.getElementById('imageFormatGroup');
+const videoFormatGroup = document.getElementById('videoFormatGroup');
 
 let currentMedia = [];
 let selectedIndices = new Set(); // Track selected images
@@ -81,6 +84,7 @@ function displayMedia(mediaArray) {
         const imageItem = document.createElement('div');
         imageItem.className = 'image-item';
         imageItem.dataset.index = index;
+        imageItem.dataset.type = media.type; // 'image' or 'video'
 
         // Add checkbox for selection
         const checkbox = document.createElement('input');
@@ -98,24 +102,40 @@ function displayMedia(mediaArray) {
             updateDownloadButtons();
         });
 
-        const img = document.createElement('img');
-        // Use the base64 thumbnail from backend
-        img.src = media.thumbnail;
-        img.alt = `Instagram image ${index + 1}`;
-        img.loading = 'lazy';
+        // Create media element (image or video)
+        let mediaElement;
+        if (media.type === 'video') {
+            mediaElement = document.createElement('video');
+            mediaElement.src = media.url_high;
+            mediaElement.controls = true;
+            mediaElement.poster = media.thumbnail;
+            mediaElement.style.width = '100%';
+            mediaElement.style.display = 'block';
+        } else {
+            mediaElement = document.createElement('img');
+            // Use the base64 thumbnail from backend
+            mediaElement.src = media.thumbnail;
+            mediaElement.alt = `Instagram ${media.type} ${index + 1}`;
+            mediaElement.loading = 'lazy';
+        }
 
-        // Make image clickable to toggle selection
-        img.addEventListener('click', () => {
+        // Make media clickable to toggle selection
+        mediaElement.addEventListener('click', (e) => {
+            // Don't toggle if clicking video controls
+            if (media.type === 'video' && e.target.tagName === 'VIDEO') {
+                return;
+            }
             checkbox.checked = !checkbox.checked;
             checkbox.dispatchEvent(new Event('change'));
         });
 
         const imageNumber = document.createElement('div');
         imageNumber.className = 'image-number';
-        imageNumber.textContent = `${index + 1}/${mediaArray.length}`;
+        const typeIcon = media.type === 'video' ? '🎥 ' : '';
+        imageNumber.textContent = `${typeIcon}${index + 1}/${mediaArray.length}`;
 
         imageItem.appendChild(checkbox);
-        imageItem.appendChild(img);
+        imageItem.appendChild(mediaElement);
         imageItem.appendChild(imageNumber);
         imageGrid.appendChild(imageItem);
     });
@@ -126,7 +146,7 @@ function displayMedia(mediaArray) {
     updateDownloadButtons();
 }
 
-// Update download button text based on selection
+// Update download button text and format dropdown based on selection
 function updateDownloadButtons() {
     if (!downloadBtn) return; // Guard against null
     
@@ -136,10 +156,56 @@ function updateDownloadButtons() {
     } else {
         downloadBtn.textContent = `Download Selected (${count})`;
     }
+    
+    // Update format dropdown based on selected media types
+    updateFormatDropdown();
 }
 
-// Convert base64 image to different format
-async function convertImageFormat(base64Data, format) {
+// Update format dropdown options based on selected media
+function updateFormatDropdown() {
+    if (selectedIndices.size === 0) {
+        // Default state - show only image format
+        imageFormatGroup.style.display = 'flex';
+        videoFormatGroup.style.display = 'none';
+        return;
+    }
+    
+    // Check what types are selected
+    let hasImages = false;
+    let hasVideos = false;
+    
+    selectedIndices.forEach(index => {
+        const media = currentMedia[index];
+        if (media.type === 'video') {
+            hasVideos = true;
+        } else {
+            hasImages = true;
+        }
+    });
+    
+    // Show/hide dropdowns based on selection
+    if (hasVideos && hasImages) {
+        // Both selected - show both dropdowns
+        imageFormatGroup.style.display = 'flex';
+        videoFormatGroup.style.display = 'flex';
+    } else if (hasVideos) {
+        // Only videos selected - show only video dropdown
+        imageFormatGroup.style.display = 'none';
+        videoFormatGroup.style.display = 'flex';
+    } else {
+        // Only images selected - show only image dropdown
+        imageFormatGroup.style.display = 'flex';
+        videoFormatGroup.style.display = 'none';
+    }
+}
+
+// Convert base64 image to different format (skip for videos)
+async function convertImageFormat(base64Data, format, mediaType) {
+    // Videos don't need conversion, return as-is
+    if (mediaType === 'video') {
+        return base64Data;
+    }
+    
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
@@ -166,13 +232,27 @@ async function convertImageFormat(base64Data, format) {
 }
 
 // Download single file
-async function downloadFile(base64Data, filename, format) {
+async function downloadFile(urlOrBase64, filename, format, mediaType) {
     try {
-        let downloadData = base64Data;
+        let downloadData;
         
-        // Convert format if needed
-        if (format !== 'jpg' || !base64Data.includes('image/jpeg')) {
-            downloadData = await convertImageFormat(base64Data, format);
+        if (mediaType === 'video') {
+            // For videos, fetch as blob to force download
+            try {
+                const response = await fetch(urlOrBase64);
+                const blob = await response.blob();
+                downloadData = URL.createObjectURL(blob);
+            } catch (e) {
+                console.log('Fetch failed, trying direct URL:', e);
+                downloadData = urlOrBase64;
+            }
+        } else {
+            // For images, convert format if needed
+            if (format !== 'jpg' && format !== 'original' && !urlOrBase64.includes('image/jpeg')) {
+                downloadData = await convertImageFormat(urlOrBase64, format, mediaType);
+            } else {
+                downloadData = urlOrBase64;
+            }
         }
         
         const a = document.createElement('a');
@@ -181,7 +261,15 @@ async function downloadFile(base64Data, filename, format) {
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
-        setTimeout(() => document.body.removeChild(a), 100);
+        
+        // Clean up
+        setTimeout(() => {
+            document.body.removeChild(a);
+            if (mediaType === 'video' && downloadData.startsWith('blob:')) {
+                URL.revokeObjectURL(downloadData);
+            }
+        }, 100);
+        
         return true;
     } catch (error) {
         console.error('Download failed:', error);
@@ -203,18 +291,32 @@ async function downloadAll() {
     }
 
     const indicesToDownload = Array.from(selectedIndices).sort((a, b) => a - b);
-    const format = formatSelect.value;
+    const imageFormat = formatSelect.value;
+    const videoFormat = videoFormatSelect.value;
     let successCount = 0;
     
     for (let i = 0; i < indicesToDownload.length; i++) {
         const index = indicesToDownload[i];
         const media = currentMedia[index];
-        const filename = `instagram_${index + 1}.${format}`;
+        
+        // Use appropriate format based on media type
+        let fileExtension;
+        let format;
+        if (media.type === 'video') {
+            fileExtension = videoFormat;
+            format = videoFormat;
+        } else {
+            fileExtension = imageFormat;
+            format = imageFormat;
+        }
+        
+        const filename = `instagram_${index + 1}.${fileExtension}`;
         
         console.log(`Downloading ${filename}...`);
         
-        // Use the base64 thumbnail which downloads directly
-        const success = await downloadFile(media.thumbnail, filename, format);
+        // Use thumbnail for images, url_high for videos
+        const downloadUrl = media.type === 'video' ? media.url_high : media.thumbnail;
+        const success = await downloadFile(downloadUrl, filename, format, media.type);
         if (success) successCount++;
         
         // Small delay between downloads
