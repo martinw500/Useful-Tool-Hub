@@ -45,6 +45,8 @@ async function fetchYouTubeVideo(url) {
 
     try {
         console.log('Fetching YouTube video info...');
+        console.log('Backend URL:', API_CONFIG.BACKEND_URL);
+        console.log('Hostname:', window.location.hostname);
         
         const videoId = extractVideoId(url);
         if (!videoId) {
@@ -52,7 +54,9 @@ async function fetchYouTubeVideo(url) {
         }
 
         // Call the backend
-        const response = await fetch(`${API_CONFIG.BACKEND_URL}/api/youtube?url=${encodeURIComponent(url)}`);
+        const apiUrl = `${API_CONFIG.BACKEND_URL}/api/youtube?url=${encodeURIComponent(url)}`;
+        console.log('Fetching from:', apiUrl);
+        const response = await fetch(apiUrl);
         
         if (!response.ok) {
             const errorData = await response.json();
@@ -232,3 +236,5 @@ youtubeUrlInput.addEventListener('keypress', (e) => {
 });
 
 console.log('YouTube Downloader initialized! 🎥');
+console.log('API Configuration:', API_CONFIG);
+console.log('Current hostname:', window.location.hostname);
