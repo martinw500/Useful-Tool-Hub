@@ -148,6 +148,5 @@ def proxy_image():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Vercel expects the app to be exported
-def handler(request, context):
-    return app(request, context)
+# Export app for Vercel
+app = app
