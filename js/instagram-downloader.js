@@ -19,12 +19,10 @@ function isValidInstagramUrl(url) {
 
 // Show error message
 function showError(message) {
-    errorMsg.textContent = message;
+    errorMsg.innerHTML = `${message} <a href="troubleshooting.html" target="_blank" style="color: var(--primary-color); text-decoration: underline;">Need help?</a>`;
     errorMsg.classList.add('active');
     console.error('Error:', message);
-    setTimeout(() => {
-        errorMsg.classList.remove('active');
-    }, 8000);
+    // Error stays visible until next fetch attempt
 }
 
 // Fetch Instagram media via backend
@@ -58,9 +56,9 @@ async function fetchInstagramMedia(url) {
         console.error('Error fetching Instagram media:', error);
         
         if (error.message.includes('Failed to fetch')) {
-            showError('Backend not running! Start the backend with: python backend.py');
+            showError('Cannot connect to backend server. The server might be temporarily unavailable or Instagram is blocking requests.');
         } else {
-            showError(error.message || 'Failed to fetch Instagram media. The post might be private or unavailable.');
+            showError(error.message || 'Failed to fetch Instagram media. Please try again in a few minutes.');
         }
         
         loading.classList.remove('active');

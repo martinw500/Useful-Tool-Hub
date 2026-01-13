@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting - Useful Tool Hub</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .troubleshooting-section {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        .troubleshooting-section h1 {
+            color: var(--text-primary);
+            font-size: 2.5rem;
+            margin-bottom: 32px;
+        }
+
+        .error-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .error-card h2 {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            margin-bottom: 12px;
+        }
+
+        .error-card h3 {
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .error-card p {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .error-card ul {
+            color: var(--text-secondary);
+            margin-left: 24px;
+            line-height: 1.8;
+        }
+
+        .error-card code {
+            background: var(--bg-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: var(--primary-color);
+        }
+
+        .back-link {
+            display: inline-block;
+            color: var(--primary-color);
+            text-decoration: none;
+            margin-bottom: 24px;
+            font-size: 1rem;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="site-title">Instagram Downloader Help</h1>
+            <p class="site-subtitle">Common issues and solutions</p>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="troubleshooting-section">
+            <a href="instagram-downloader.html" class="back-link">← Back to Instagram Downloader</a>
+            
+            <h1>Troubleshooting Guide</h1>
+
+            <div class="error-card">
+                <h2>❌ "Please wait a few minutes before you try again"</h2>
+                <h3>What it means:</h3>
+                <p>Instagram has temporarily rate-limited our server. This happens when too many requests are made in a short time.</p>
+                
+                <h3>Why it happens:</h3>
+                <p>Our server runs on a cloud platform (Vercel) that shares IP addresses with many other services. Instagram's anti-bot systems detect this and apply stricter limits compared to regular home internet connections.</p>
+                
+                <h3>Solutions:</h3>
+                <ul>
+                    <li><strong>Wait 5-10 minutes</strong> and try again</li>
+                    <li>Try a different Instagram post URL</li>
+                    <li>Come back later - rate limits reset over time</li>
+                </ul>
+            </div>
+
+            <div class="error-card">
+                <h2>🔌 "Cannot connect to backend server"</h2>
+                <h3>What it means:</h3>
+                <p>The tool couldn't reach our server to process your request.</p>
+                
+                <h3>Possible causes:</h3>
+                <ul>
+                    <li>Your internet connection is down</li>
+                    <li>The server is temporarily offline for maintenance</li>
+                    <li>A firewall or browser extension is blocking the request</li>
+                </ul>
+                
+                <h3>Solutions:</h3>
+                <ul>
+                    <li>Check your internet connection</li>
+                    <li>Try disabling ad blockers or privacy extensions</li>
+                    <li>Wait a few minutes and try again</li>
+                </ul>
+            </div>
+
+            <div class="error-card">
+                <h2>🔒 "No media found in post"</h2>
+                <h3>What it means:</h3>
+                <p>The tool couldn't find any images or videos in the Instagram post.</p>
+                
+                <h3>Possible causes:</h3>
+                <ul>
+                    <li>The post is private or has been deleted</li>
+                    <li>The URL is incorrect or incomplete</li>
+                    <li>The post contains only text or polls (no media)</li>
+                    <li>The account is private and you need to be logged in to view it</li>
+                </ul>
+                
+                <h3>Solutions:</h3>
+                <ul>
+                    <li>Verify the URL is correct (should look like: <code>instagram.com/p/ABC123...</code>)</li>
+                    <li>Make sure the post is public</li>
+                    <li>Try a different post</li>
+                </ul>
+            </div>
+
+            <div class="error-card">
+                <h2>⚠️ "Invalid Instagram URL"</h2>
+                <h3>What it means:</h3>
+                <p>The URL format isn't recognized as a valid Instagram post or reel.</p>
+                
+                <h3>Correct URL formats:</h3>
+                <ul>
+                    <li><code>https://www.instagram.com/p/SHORTCODE/</code></li>
+                    <li><code>https://www.instagram.com/reel/SHORTCODE/</code></li>
+                    <li><code>https://instagram.com/p/SHORTCODE/</code></li>
+                </ul>
+                
+                <h3>Not supported:</h3>
+                <ul>
+                    <li>Profile URLs (<code>instagram.com/username</code>)</li>
+                    <li>Story URLs</li>
+                    <li>IGTV URLs (old format)</li>
+                </ul>
+            </div>
+
+            <div class="error-card">
+                <h2>💡 Tips for Best Results</h2>
+                <ul>
+                    <li><strong>Use public posts:</strong> Private accounts cannot be accessed</li>
+                    <li><strong>Be patient:</strong> If you see a rate limit error, wait a few minutes</li>
+                    <li><strong>Select images:</strong> Click on images to select which ones to download</li>
+                    <li><strong>Downloads:</strong> Files save directly to your default download folder</li>
+                </ul>
+            </div>
+
+            <div class="error-card">
+                <h2>📧 Still Need Help?</h2>
+                <p>If you're experiencing issues not covered here, please visit our <a href="feedback.html" style="color: var(--primary-color); text-decoration: underline;">Feedback Page</a> to report the problem.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer style="background: var(--bg-secondary); border-top: 1px solid var(--border-color); padding: 24px 0; text-align: center; color: var(--text-secondary); margin-top: 60px;">
+        <div class="container">
+            <p>Made with ❤ by <a href="feedback.html" style="color: var(--primary-color); text-decoration: none; border-bottom: 1px dashed var(--primary-color);">Us</a></p>
+        </div>
+    </footer>
+</body>
+</html>
