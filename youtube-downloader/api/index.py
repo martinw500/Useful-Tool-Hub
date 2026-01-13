@@ -10,10 +10,19 @@ CORS(app, origins=["*"])
 
 @app.route('/health', methods=['GET'])
 def health():
+    try:
+        import yt_dlp as test_ytdlp
+        ytdlp_version = test_ytdlp.version.__version__
+        ytdlp_status = 'imported successfully'
+    except Exception as e:
+        ytdlp_version = 'N/A'
+        ytdlp_status = f'import failed: {str(e)}'
+    
     return jsonify({
         'status': 'ok',
         'python_version': sys.version,
-        'yt_dlp_available': True
+        'yt_dlp_available': ytdlp_status,
+        'yt_dlp_version': ytdlp_version
     }), 200
 
 @app.route('/', methods=['GET'])
