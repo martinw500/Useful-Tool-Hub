@@ -6,6 +6,7 @@ import re
 app = Flask(__name__)
 CORS(app, origins=["*"])
 
+@app.route('/', methods=['GET'])
 @app.route('/api/youtube', methods=['GET'])
 def get_youtube():
     url = request.args.get('url')
