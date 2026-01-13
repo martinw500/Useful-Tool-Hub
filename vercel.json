@@ -12,11 +12,11 @@
   ],
   "routes": [
     {
-      "src": "/api/instagram",
+      "src": "/api/instagram(.*)",
       "dest": "instagram-downloader/api/index.py"
     },
     {
-      "src": "/api/youtube",
+      "src": "/api/youtube(.*)",
       "dest": "youtube-downloader/api/index.py"
     }
   ]

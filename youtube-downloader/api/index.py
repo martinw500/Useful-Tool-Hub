@@ -25,11 +25,14 @@ def get_youtube():
         return jsonify({'error': 'URL parameter required'}), 400
     
     try:
-        # yt-dlp options
+        # yt-dlp options optimized for serverless
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
             'extract_flat': False,
+            'socket_timeout': 10,
+            'no_check_certificate': True,
+            'prefer_insecure': False,
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
