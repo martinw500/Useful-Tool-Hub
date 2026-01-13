@@ -25,7 +25,7 @@ def health():
         'yt_dlp_version': ytdlp_version
     }), 200
 
-@app.route('/', methods=['GET'])
+@app.route('/api/youtube', methods=['GET'])
 def get_youtube():
     url = request.args.get('url')
     
