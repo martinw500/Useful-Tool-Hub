@@ -25,6 +25,17 @@ def health():
         'yt_dlp_version': ytdlp_version
     }), 200
 
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({
+        'service': 'YouTube Downloader API',
+        'status': 'active',
+        'endpoints': {
+            '/api/youtube': 'Fetch YouTube video info',
+            '/health': 'Health check'
+        }
+    }), 200
+
 @app.route('/api/youtube', methods=['GET'])
 def get_youtube():
     url = request.args.get('url')
