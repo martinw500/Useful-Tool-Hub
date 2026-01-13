@@ -2,3 +2,4 @@ flask
 flask-cors
 requests
 instaloader
+yt-dlp

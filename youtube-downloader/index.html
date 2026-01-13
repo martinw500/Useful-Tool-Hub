@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Downloader - Useful Tool Hub</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .tool-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: var(--primary-color);
+            text-decoration: none;
+            margin-bottom: 24px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--primary-hover);
+        }
+
+        .tool-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+
+        .tool-card h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .tool-card .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+        }
+
+        .notice {
+            background: rgba(96, 165, 250, 0.1);
+            border: 1px solid var(--primary-color);
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 24px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px 16px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 24px;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .video-info {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            max-width: 480px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .video-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .video-details {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .download-section {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .download-section h3 {
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .quality-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .quality-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .quality-option:hover {
+            border-color: var(--primary-color);
+        }
+
+        .quality-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .quality-label {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .quality-details {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .download-btn {
+            padding: 8px 16px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .download-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .download-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            border-radius: 6px;
+            padding: 12px 16px;
+            color: #fca5a5;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="site-title">Useful Tool Hub</h1>
+            <p class="site-subtitle">YouTube Video Downloader</p>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container tool-container">
+            <a href="../index.html" class="back-link">← Back to Home</a>
+            
+            <div class="tool-card">
+                <h1>🎥 YouTube Video Downloader</h1>
+                <p class="subtitle">Download YouTube videos in various formats and qualities</p>
+
+                <div class="notice">
+                    ℹ️ Note: This tool is for personal use only. Please respect YouTube's Terms of Service and copyright laws.
+                </div>
+
+                <div class="input-group">
+                    <label for="youtubeUrl">YouTube Video URL</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="url" 
+                            id="youtubeUrl" 
+                            placeholder="https://www.youtube.com/watch?v=..."
+                            autocomplete="off"
+                        >
+                        <button class="btn" id="fetchBtn">Fetch</button>
+                    </div>
+                </div>
+
+                <div class="error" id="errorMsg"></div>
+
+                <div class="loading" id="loading">
+                    <p>⏳ Fetching video information...</p>
+                </div>
+
+                <div class="results" id="results">
+                    <div class="video-info" id="videoInfo"></div>
+                    <div class="download-section">
+                        <h3>Download Options</h3>
+                        <div class="quality-options" id="qualityOptions"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p><a href="../feedback.html">Made with ❤</a> | © 2026 Useful Tool Hub</p>
+        </div>
+    </footer>
+
+    <script src="../js/config.js"></script>
+    <script src="js/youtube-downloader.js"></script>
+</body>
+</html>
