@@ -6,6 +6,8 @@ const results = document.getElementById('results');
 const imageGrid = document.getElementById('imageGrid');
 const errorMsg = document.getElementById('errorMsg');
 const downloadBtn = document.getElementById('downloadBtn');
+const selectAllBtn = document.getElementById('selectAllBtn');
+const resultsCount = document.getElementById('resultsCount');
 const formatSelect = document.getElementById('formatSelect');
 const videoFormatSelect = document.getElementById('videoFormatSelect');
 const imageFormatGroup = document.getElementById('imageFormatGroup');
@@ -144,6 +146,21 @@ function displayMedia(mediaArray) {
     results.classList.add('active');
     fetchBtn.disabled = false;
     updateDownloadButtons();
+    
+    // Update results count
+    if (resultsCount) {
+        const imageCount = mediaArray.filter(m => m.type !== 'video').length;
+        const videoCount = mediaArray.filter(m => m.type === 'video').length;
+        let countText = '';
+        if (imageCount > 0 && videoCount > 0) {
+            countText = `${mediaArray.length} items found (${imageCount} image${imageCount > 1 ? 's' : ''}, ${videoCount} video${videoCount > 1 ? 's' : ''})`;
+        } else if (imageCount > 0) {
+            countText = `${imageCount} image${imageCount > 1 ? 's' : ''} found`;
+        } else {
+            countText = `${videoCount} video${videoCount > 1 ? 's' : ''} found`;
+        }
+        resultsCount.textContent = countText;
+    }
 }
 
 // Update download button text and format dropdown based on selection
@@ -155,6 +172,15 @@ function updateDownloadButtons() {
         downloadBtn.textContent = `Download Selected (0)`;
     } else {
         downloadBtn.textContent = `Download Selected (${count})`;
+    }
+    
+    // Update Select All button text
+    if (selectAllBtn && currentMedia.length > 0) {
+        if (selectedIndices.size === currentMedia.length) {
+            selectAllBtn.textContent = 'Deselect All';
+        } else {
+            selectAllBtn.textContent = 'Select All';
+        }
     }
     
     // Update format dropdown based on selected media types
@@ -354,5 +380,35 @@ instagramUrlInput.addEventListener('keypress', (e) => {
 
 // Download button handlers
 downloadBtn.addEventListener('click', () => downloadAll());
+
+// Select All button
+selectAllBtn.addEventListener('click', () => {
+    if (currentMedia.length === 0) return;
+    
+    const allSelected = selectedIndices.size === currentMedia.length;
+    
+    if (allSelected) {
+        // Deselect all
+        selectedIndices.clear();
+        document.querySelectorAll('.image-item').forEach(item => {
+            item.classList.remove('selected');
+            const checkbox = item.querySelector('.image-checkbox');
+            if (checkbox) checkbox.checked = false;
+        });
+        selectAllBtn.textContent = 'Select All';
+    } else {
+        // Select all
+        selectedIndices.clear();
+        document.querySelectorAll('.image-item').forEach((item, index) => {
+            selectedIndices.add(index);
+            item.classList.add('selected');
+            const checkbox = item.querySelector('.image-checkbox');
+            if (checkbox) checkbox.checked = true;
+        });
+        selectAllBtn.textContent = 'Deselect All';
+    }
+    
+    updateDownloadButtons();
+});
 
 console.log('Instagram Downloader initialized! 📷');

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instagram Image Downloader - Useful Tool Hub</title>
+    <title>Instagram Post Downloader - Useful Tool Hub</title>
     <link rel="stylesheet" href="styles.css">
     <style>
         .tool-container {
@@ -123,6 +123,38 @@
 
         .results.active {
             display: block;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 0 4px;
+        }
+
+        .results-count {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .select-all-link {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--primary-color);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .select-all-link:hover {
+            background: rgba(96, 165, 250, 0.1);
+            border-color: var(--primary-color);
+            color: var(--primary-hover);
         }
 
         .image-grid {
@@ -297,7 +329,7 @@
     <header class="header">
         <div class="container">
             <h1 class="site-title">Useful Tool Hub</h1>
-            <p class="site-subtitle">Instagram Image Downloader</p>
+            <p class="site-subtitle">Instagram Post Downloader</p>
         </div>
     </header>
 
@@ -306,7 +338,7 @@
             <a href="index.html" class="back-link">← Back to Home</a>
             
             <div class="tool-card">
-                <h1>📷 Instagram Image Downloader</h1>
+                <h1>📷 Instagram Post Downloader</h1>
                 <p class="subtitle">Download images and videos from public Instagram posts</p>
 
                 <div class="notice">
@@ -333,6 +365,10 @@
                 </div>
 
                 <div class="results" id="results">
+                    <div class="results-header">
+                        <span class="results-count" id="resultsCount">0 items found</span>
+                        <button class="select-all-link" id="selectAllBtn">Select All</button>
+                    </div>
                     <div class="image-grid" id="imageGrid"></div>
                     <div class="download-section">
                         <h3>Download Options</h3>
