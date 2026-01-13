@@ -44,20 +44,23 @@ def get_youtube():
         return jsonify({'error': 'URL parameter required'}), 400
     
     try:
-        # yt-dlp options optimized for serverless with bot detection bypass
+        # yt-dlp options optimized for serverless with aggressive bot detection bypass
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
             'extract_flat': False,
-            'socket_timeout': 10,
+            'socket_timeout': 15,
             'no_check_certificate': False,
             'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'extractor_args': {
                 'youtube': {
-                    'player_client': ['android', 'web'],
-                    'player_skip': ['webpage', 'configs'],
+                    'player_client': ['android', 'web', 'ios'],
+                    'player_skip': ['webpage'],
+                    'skip': ['hls', 'dash'],
                 }
             },
+            'format': 'best',
+            'age_limit': None,
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
