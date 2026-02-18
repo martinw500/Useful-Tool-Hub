@@ -1,4 +1,6 @@
-// YouTube Downloader functionality
+// ============================================
+// YouTube Downloader
+// ============================================
 const fetchBtn = document.getElementById('fetchBtn');
 const youtubeUrlInput = document.getElementById('youtubeUrl');
 const loading = document.getElementById('loading');
@@ -6,235 +8,187 @@ const results = document.getElementById('results');
 const videoInfo = document.getElementById('videoInfo');
 const qualityOptions = document.getElementById('qualityOptions');
 const errorMsg = document.getElementById('errorMsg');
+const errorText = document.getElementById('errorText');
 
 let currentVideoData = null;
 
-// Validate YouTube URL
 function isValidYouTubeUrl(url) {
-    const regex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
-    return regex.test(url);
+    return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/.test(url);
 }
 
-// Extract video ID from URL
 function extractVideoId(url) {
     const patterns = [
         /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\?\/]+)/,
         /youtube\.com\/shorts\/([^&\?\/]+)/
     ];
-    
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match) return match[1];
+    for (const p of patterns) {
+        const m = url.match(p);
+        if (m) return m[1];
     }
     return null;
 }
 
-// Show error message
 function showError(message) {
-    errorMsg.textContent = message;
+    errorText.innerHTML = message;
     errorMsg.classList.add('active');
-    console.error('Error:', message);
 }
 
-// Fetch YouTube video info
+function hideError() {
+    errorMsg.classList.remove('active');
+}
+
 async function fetchYouTubeVideo(url) {
     loading.classList.add('active');
     results.classList.remove('active');
-    errorMsg.classList.remove('active');
+    hideError();
     fetchBtn.disabled = true;
 
     try {
-        console.log('Fetching YouTube video info...');
-        console.log('Backend URL:', API_CONFIG.BACKEND_URL);
-        console.log('Hostname:', window.location.hostname);
-        
         const videoId = extractVideoId(url);
-        if (!videoId) {
-            throw new Error('Could not extract video ID from URL');
-        }
+        if (!videoId) throw new Error('Could not extract video ID from URL');
 
-        // Call the backend
         const apiUrl = `${API_CONFIG.BACKEND_URL}/api/youtube?url=${encodeURIComponent(url)}`;
-        console.log('Fetching from:', apiUrl);
         const response = await fetch(apiUrl);
-        
+
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error || 'Failed to fetch video information');
         }
-        
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error('No video information found');
-        }
-        
-        console.log('Video info received:', data);
-        displayVideoInfo(data);
 
+        const data = await response.json();
+        if (!data.success) throw new Error('No video information found');
+
+        currentVideoData = data;
+        currentVideoData.originalUrl = url;
+        displayVideoInfo(data);
     } catch (error) {
-        console.error('Error fetching YouTube video:', error);
-        
         if (error.message.includes('Failed to fetch')) {
             showError('Cannot connect to backend server. The server might be temporarily unavailable.');
         } else {
             showError(error.message || 'Failed to fetch video information. Please try again.');
         }
-        
         loading.classList.remove('active');
         fetchBtn.disabled = false;
     }
 }
 
-// Display video information
 function displayVideoInfo(data) {
     currentVideoData = data;
-    currentVideoData.url = youtubeUrlInput.value.trim(); // Store original URL
-    
-    // Display video info
+    currentVideoData.url = youtubeUrlInput.value.trim();
+
     videoInfo.innerHTML = `
-        <img src="${data.thumbnail}" alt="Video thumbnail" class="video-thumbnail">
-        <div class="video-title">${data.title}</div>
-        <div class="video-details">
-            <div>Channel: ${data.channel}</div>
-            <div>Duration: ${formatDuration(data.duration)}</div>
-            <div>Views: ${formatViews(data.views)}</div>
+        <div class="video-thumbnail-wrap">
+            <img src="${data.thumbnail}" alt="Video thumbnail">
+        </div>
+        <div class="video-meta">
+            <div class="video-title">${data.title}</div>
+            <div class="video-details-row">
+                <div class="video-detail">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    ${formatViews(data.views)}
+                </div>
+                <div class="video-detail">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    ${formatDuration(data.duration)}
+                </div>
+                <div class="video-detail">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    ${data.channel}
+                </div>
+            </div>
         </div>
     `;
-    
-    // Display quality options
+
     qualityOptions.innerHTML = '';
-    
+
     if (data.formats && data.formats.length > 0) {
         data.formats.forEach((format, index) => {
-            const option = document.createElement('div');
-            option.className = 'quality-option';
-            option.innerHTML = `
+            const item = document.createElement('div');
+            item.className = 'quality-item';
+            item.innerHTML = `
                 <div class="quality-info">
                     <div class="quality-label">${format.quality}</div>
-                    <div class="quality-details">${format.ext} • ${format.filesize || 'Size unknown'}</div>
+                    <div class="quality-meta">${format.ext} &bull; ${format.filesize || 'Size unknown'}</div>
                 </div>
-                <button class="download-btn" data-format="${index}" data-format-id="${format.format_id || ''}">Download</button>
+                <button class="btn btn-primary btn-sm" data-format="${index}" data-format-id="${format.format_id || ''}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    Download
+                </button>
             `;
-            qualityOptions.appendChild(option);
+            qualityOptions.appendChild(item);
         });
-        
-        // Add event listeners to download buttons
-        document.querySelectorAll('.download-btn[data-format]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const formatIndex = parseInt(btn.dataset.format);
-                downloadVideo(formatIndex);
-            });
+
+        document.querySelectorAll('.quality-item .btn[data-format]').forEach(btn => {
+            btn.addEventListener('click', () => downloadVideo(parseInt(btn.dataset.format)));
         });
     } else {
-        qualityOptions.innerHTML = '<p style="color: var(--text-secondary);">No download formats available.</p>';
+        qualityOptions.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 16px;">No download formats available.</p>';
     }
-    
+
     loading.classList.remove('active');
     results.classList.add('active');
     fetchBtn.disabled = false;
 }
 
-// Format duration
 function formatDuration(seconds) {
     if (!seconds) return 'Unknown';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    
-    if (hours > 0) {
-        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return h > 0
+        ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+        : `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-// Format views
 function formatViews(views) {
     if (!views) return 'Unknown';
-    if (views >= 1000000) {
-        return `${(views / 1000000).toFixed(1)}M views`;
-    } else if (views >= 1000) {
-        return `${(views / 1000).toFixed(1)}K views`;
-    }
+    if (views >= 1e6) return `${(views / 1e6).toFixed(1)}M views`;
+    if (views >= 1e3) return `${(views / 1e3).toFixed(1)}K views`;
     return `${views} views`;
 }
 
-// Download video
 async function downloadVideo(formatIndex) {
     if (!currentVideoData || !currentVideoData.formats[formatIndex]) {
         showError('Download format not available');
         return;
     }
-    
+
     const format = currentVideoData.formats[formatIndex];
-    const downloadUrl = format.url;
-    
-    // Update button to show loading state
     const btn = document.querySelector(`button[data-format="${formatIndex}"]`);
-    if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Starting...';
-    }
-    
+    if (btn) { btn.disabled = true; btn.textContent = 'Starting...'; }
+
     try {
-        // Use direct download link
+        const filename = `${currentVideoData.title}.${format.ext}`.replace(/[/\\?%*:|"<>]/g, '-');
+        const videoUrl = currentVideoData.originalUrl || `https://www.youtube.com/watch?v=${extractVideoId(currentVideoData.thumbnail)}`;
+        const proxyUrl = `${API_CONFIG.BACKEND_URL}/api/youtube/download?url=${encodeURIComponent(videoUrl)}&quality=${encodeURIComponent(format.quality)}&filename=${encodeURIComponent(filename)}`;
+
+        if (btn) btn.textContent = 'Downloading...';
+
         const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = `${currentVideoData.title}.${format.ext}`;
+        a.href = proxyUrl;
+        a.download = filename;
         a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
-        
-        // Clean up
-        setTimeout(() => {
-            document.body.removeChild(a);
-        }, 100);
-        
-        console.log('Download started:', format.quality);
-        
-        // Reset button after a short delay
-        setTimeout(() => {
-            if (btn) {
-                btn.disabled = false;
-                btn.textContent = 'Download';
-            }
-        }, 2000);
+        setTimeout(() => document.body.removeChild(a), 100);
+
+        if (btn) { btn.disabled = false; btn.textContent = 'Download'; }
     } catch (error) {
-        console.error('Download failed:', error);
         showError('Download failed. Please try again or try a different quality.');
-        
-        // Reset button
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Download';
-        }
+        if (btn) { btn.disabled = false; btn.textContent = 'Download'; }
     }
 }
 
 // Event listeners
 fetchBtn.addEventListener('click', () => {
     const url = youtubeUrlInput.value.trim();
-    
-    if (!url) {
-        showError('Please enter a YouTube URL');
-        return;
-    }
-    
-    if (!isValidYouTubeUrl(url)) {
-        showError('Please enter a valid YouTube URL');
-        return;
-    }
-    
+    if (!url) { showError('Please enter a YouTube URL'); return; }
+    if (!isValidYouTubeUrl(url)) { showError('Please enter a valid YouTube URL'); return; }
     fetchYouTubeVideo(url);
 });
 
-// Allow Enter key to fetch
 youtubeUrlInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        fetchBtn.click();
-    }
+    if (e.key === 'Enter') fetchBtn.click();
 });
 
-console.log('YouTube Downloader initialized! 🎥');
-console.log('API Configuration:', API_CONFIG);
-console.log('Current hostname:', window.location.hostname);
+console.log('YouTube Downloader initialized');

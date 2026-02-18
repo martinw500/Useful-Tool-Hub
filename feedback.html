@@ -3,142 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Feedback - Useful Tool Hub</title>
+    <title>Feedback — Useful Tool Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <style>
-        .feedback-container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .back-link {
-            display: inline-block;
-            color: var(--primary-color);
-            text-decoration: none;
-            margin-bottom: 24px;
-            transition: color 0.2s;
-        }
-
-        .back-link:hover {
-            color: var(--primary-hover);
-        }
-
-        .feedback-form {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 32px;
-        }
-
-        .feedback-form h1 {
-            font-size: 2rem;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-        }
-
-        .feedback-form p {
-            color: var(--text-secondary);
-            margin-bottom: 32px;
-        }
-
-        .form-group {
-            margin-bottom: 24px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%;
-            padding: 12px;
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 1rem;
-        }
-
-        .form-group textarea {
-            min-height: 150px;
-            resize: vertical;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-        }
-
-        .submit-btn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 12px 32px;
-            border-radius: 6px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .submit-btn:hover {
-            background: var(--primary-hover);
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .message {
-            padding: 12px 16px;
-            border-radius: 6px;
-            margin-bottom: 24px;
-            display: none;
-        }
-
-        .message.success {
-            background: rgba(34, 197, 94, 0.1);
-            border: 1px solid #22c55e;
-            color: #86efac;
-        }
-
-        .message.error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid #ef4444;
-            color: #fca5a5;
-        }
-
-        .message.active {
-            display: block;
-        }
-    </style>
 </head>
 <body>
-    <header class="header">
-        <div class="container">
-            <h1 class="site-title">Useful Tool Hub</h1>
-            <p class="site-subtitle">Feedback</p>
-        </div>
-    </header>
 
-    <main class="main-content">
-        <div class="container feedback-container">
-            <a href="index.html" class="back-link">← Back to Home</a>
-            
-            <div class="feedback-form">
-                <h1>We'd love your feedback!</h1>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-brand">
+                <div class="nav-logo">U</div>
+                <span class="nav-title">Useful Tool Hub</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html" class="nav-link">Tools</a></li>
+                <li><a href="feedback.html" class="nav-link active">Feedback</a></li>
+                <li><a href="https://github.com/martinw500/UTH" target="_blank" class="nav-link">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Feedback Page -->
+    <main class="tool-page">
+        <div class="container tool-page-container" style="max-width: 640px;">
+
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="index.html">Home</a>
+                <span class="breadcrumb-sep">/</span>
+                <span class="breadcrumb-current">Feedback</span>
+            </div>
+
+            <div class="feedback-panel">
+                <h1>We'd love your feedback</h1>
                 <p>Help us improve by sharing your thoughts, suggestions, or reporting issues.</p>
-                
-                <div id="messageBox" class="message"></div>
+
+                <div id="messageBox" class="message-box"></div>
 
                 <form id="feedbackForm" action="https://formspree.io/f/xpqqzjdd" method="POST">
                     <div class="form-group">
@@ -167,15 +70,20 @@
                         <textarea id="message" name="message" required placeholder="Tell us what you think..."></textarea>
                     </div>
 
-                    <button type="submit" class="submit-btn">Submit Feedback</button>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Feedback</button>
                 </form>
             </div>
         </div>
     </main>
 
+    <!-- Footer -->
     <footer class="footer">
-        <div class="container">
-            <p><a href="feedback.html">Made with ❤</a> | © 2026 Useful Tool Hub</p>
+        <div class="footer-inner">
+            <div class="footer-left">&copy; 2026 Useful Tool Hub</div>
+            <ul class="footer-links">
+                <li><a href="feedback.html">Feedback</a></li>
+                <li><a href="https://github.com/martinw500/UTH" target="_blank">GitHub</a></li>
+            </ul>
         </div>
     </footer>
 
@@ -183,40 +91,34 @@
         document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('feedbackForm');
             const messageBox = document.getElementById('messageBox');
-            const submitBtn = form.querySelector('.submit-btn');
+            const submitBtn = form.querySelector('.btn');
 
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                // Disable button and show loading
+
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Sending...';
                 messageBox.classList.remove('active', 'success', 'error');
-                
+
                 try {
                     const response = await fetch(form.action, {
                         method: 'POST',
                         body: new FormData(form),
-                        headers: {
-                            'Accept': 'application/json'
-                        }
+                        headers: { 'Accept': 'application/json' }
                     });
-                    
+
                     if (response.ok) {
-                        // Success
-                        messageBox.textContent = '✓ Thank you for your feedback! We appreciate your input.';
+                        messageBox.textContent = 'Thank you for your feedback! We appreciate your input.';
                         messageBox.classList.add('active', 'success');
                         form.reset();
                     } else {
                         throw new Error('Submission failed');
                     }
-                } catch (error) {
-                    // Error
-                    messageBox.textContent = '✗ Oops! There was a problem submitting your feedback. Please try again.';
+                } catch {
+                    messageBox.textContent = 'Oops! There was a problem submitting your feedback. Please try again.';
                     messageBox.classList.add('active', 'error');
                 } finally {
-                    // Re-enable button
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Submit Feedback';
                 }

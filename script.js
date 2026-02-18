@@ -1,48 +1,54 @@
-// Smooth scrolling for navigation links
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    });
-});
+// ============================================
+// Useful Tool Hub — Main Script
+// ============================================
 
-// Search functionality
-const searchInput = document.getElementById('searchInput');
-if (searchInput) {
-    searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        const linkItems = document.querySelectorAll('.link-item');
-        
-        linkItems.forEach(item => {
-            const title = item.querySelector('.link-title').textContent.toLowerCase();
-            const description = item.querySelector('.link-description').textContent.toLowerCase();
-            
-            if (title.includes(searchTerm) || description.includes(searchTerm)) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
+(function () {
+    'use strict';
+
+    const searchInput = document.getElementById('searchInput');
+    const toolsGrid = document.getElementById('toolsGrid');
+    const visibleCount = document.getElementById('visibleCount');
+
+    // --- Search ---
+    function filterTools(query) {
+        const cards = toolsGrid.querySelectorAll('.tool-card');
+        let visible = 0;
+
+        cards.forEach(card => {
+            const title = card.querySelector('.tool-card-title')?.textContent.toLowerCase() || '';
+            const desc = card.querySelector('.tool-card-desc')?.textContent.toLowerCase() || '';
+            const keywords = (card.dataset.keywords || '').toLowerCase();
+            const match = !query || title.includes(query) || desc.includes(query) || keywords.includes(query);
+
+            card.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+
+        if (visibleCount) {
+            visibleCount.textContent = `${visible} tool${visible !== 1 ? 's' : ''}`;
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            filterTools(searchInput.value.trim().toLowerCase());
+        });
+
+        // Ctrl+K shortcut
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+            }
+            // Escape to clear
+            if (e.key === 'Escape' && document.activeElement === searchInput) {
+                searchInput.value = '';
+                filterTools('');
+                searchInput.blur();
             }
         });
-    });
-}
+    }
 
-// Tool link click handlers (placeholders for future functionality)
-document.querySelectorAll('.link-item a').forEach(link => {
-    link.addEventListener('click', function(e) {
-        // Only prevent default for internal links (not external resources)
-        if (this.getAttribute('href') === '#') {
-            e.preventDefault();
-            const toolName = this.textContent;
-            console.log(`Opening tool: ${toolName}`);
-            alert(`${toolName} - Coming Soon! This tool will be implemented shortly.`);
-        }
-    });
-});
-
-console.log('Useful Tool Hub initialized! 🛠️');
+    console.log('Useful Tool Hub initialized');
+})();
