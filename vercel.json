@@ -3,13 +3,27 @@
   "builds": [
     {
       "src": "instagram-downloader/api/index.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     },
     {
       "src": "youtube-downloader/api/index.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     }
   ],
+  "functions": {
+    "instagram-downloader/api/index.py": {
+      "maxDuration": 60
+    },
+    "youtube-downloader/api/index.py": {
+      "maxDuration": 60
+    }
+  },
   "routes": [
     {
       "src": "/api/instagram(.*)",

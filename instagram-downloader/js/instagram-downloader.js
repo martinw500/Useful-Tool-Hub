@@ -53,8 +53,10 @@ async function fetchInstagramMedia(url) {
 
         displayMedia(data.media);
     } catch (error) {
-        if (error.message.includes('Failed to fetch')) {
-            showError('Cannot connect to backend server. The server might be temporarily unavailable or Instagram is blocking requests.');
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            showError('Cannot connect to backend server. Please wait a moment and try again. The server may be starting up (cold start takes ~10s).');
+        } else if (error.message.includes('rate') || error.message.includes('wait') || error.message.includes('429')) {
+            showError('Instagram is rate-limiting requests. Please wait 2-3 minutes before trying again.');
         } else {
             showError(error.message || 'Failed to fetch Instagram media. Please try again in a few minutes.');
         }

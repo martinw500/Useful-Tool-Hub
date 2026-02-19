@@ -8,6 +8,14 @@ import traceback
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type"]}})
 
+def get_ydl_opts():
+    """Get yt-dlp options optimized for serverless environments"""
+    return {
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': False,
+        'socket_timeout': 30,
+    }
 @app.route('/health', methods=['GET'])
 def health():
     try:
@@ -47,25 +55,14 @@ def get_youtube():
     if not url:
         return jsonify({'error': 'URL parameter required'}), 400
     
+    # Clean URL - extract video ID
+    video_id_match = re.search(r'(?:v=|/)([a-zA-Z0-9_-]{11})', url)
+    if video_id_match:
+        video_id = video_id_match.group(1)
+        url = f'https://www.youtube.com/watch?v={video_id}'
+    
     try:
-        # yt-dlp options optimized for serverless with aggressive bot detection bypass
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': False,
-            'socket_timeout': 15,
-            'no_check_certificate': False,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android', 'web', 'ios'],
-                    'player_skip': ['webpage'],
-                    'skip': ['hls', 'dash'],
-                }
-            },
-            'format': 'best',
-            'age_limit': None,
-        }
+        ydl_opts = get_ydl_opts()
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -84,70 +81,53 @@ def get_youtube():
             # Filter and sort formats
             formats = info.get('formats', [])
             
-            # Get unique quality options (prefer formats with both video and audio)
-            seen_qualities = set()
+            # Collect best format per quality level
+            quality_map = {}
+            
             for fmt in formats:
-                # Skip audio-only or video-only formats if possible
-                if fmt.get('vcodec') == 'none' or fmt.get('acodec') == 'none':
+                # Skip audio-only formats
+                if fmt.get('vcodec') == 'none':
                     continue
                 
-                quality = fmt.get('format_note', fmt.get('quality', 'unknown'))
-                height = fmt.get('height', 0)
+                height = fmt.get('height')
+                if not height:
+                    continue
                 
-                # Create quality label
-                if height:
-                    quality_label = f"{height}p"
-                else:
-                    quality_label = quality
+                quality_label = f"{height}p"
+                has_audio = fmt.get('acodec') != 'none'
                 
-                if quality_label not in seen_qualities:
-                    seen_qualities.add(quality_label)
-                    
+                # Prefer formats with audio included
+                if quality_label not in quality_map or (has_audio and not quality_map[quality_label].get('has_audio', False)):
                     filesize = fmt.get('filesize') or fmt.get('filesize_approx')
-                    filesize_str = f"{filesize / (1024*1024):.1f} MB" if filesize else "Unknown size"
+                    if filesize and filesize > 0:
+                        filesize_str = f"{filesize / (1024*1024):.1f} MB"
+                    else:
+                        duration = info.get('duration', 0)
+                        if duration and height:
+                            bitrate_kbps = {
+                                144: 200, 240: 400, 360: 800,
+                                480: 1500, 720: 2500, 1080: 4500
+                            }.get(height, 1000)
+                            estimated_size = (bitrate_kbps * duration / 8) / 1024
+                            filesize_str = f"~{estimated_size:.1f} MB"
+                        else:
+                            filesize_str = "Size unknown"
                     
-                    video_data['formats'].append({
+                    quality_map[quality_label] = {
                         'quality': quality_label,
                         'ext': fmt.get('ext', 'mp4'),
                         'url': fmt.get('url', ''),
                         'filesize': filesize_str,
-                        'format_id': fmt.get('format_id', '')
-                    })
+                        'format_id': fmt.get('format_id', ''),
+                        'has_audio': has_audio,
+                        'height': height
+                    }
             
-            # If no combined formats, provide separate video+audio info
-            if not video_data['formats']:
-                # Get best video and audio separately
-                best_video = None
-                best_audio = None
-                
-                for fmt in formats:
-                    if fmt.get('vcodec') != 'none' and fmt.get('acodec') == 'none':
-                        if not best_video or (fmt.get('height', 0) > best_video.get('height', 0)):
-                            best_video = fmt
-                    elif fmt.get('acodec') != 'none' and fmt.get('vcodec') == 'none':
-                        if not best_audio:
-                            best_audio = fmt
-                
-                if best_video:
-                    height = best_video.get('height', 0)
-                    quality_label = f"{height}p (video only)" if height else "Best quality"
-                    
-                    filesize = best_video.get('filesize') or best_video.get('filesize_approx')
-                    filesize_str = f"{filesize / (1024*1024):.1f} MB" if filesize else "Unknown size"
-                    
-                    video_data['formats'].append({
-                        'quality': quality_label,
-                        'ext': best_video.get('ext', 'mp4'),
-                        'url': best_video.get('url', ''),
-                        'filesize': filesize_str,
-                        'format_id': best_video.get('format_id', '')
-                    })
+            # Convert to sorted list
+            video_data['formats'] = sorted(quality_map.values(), key=lambda x: x['height'], reverse=True)
             
-            # Sort by quality (highest first)
-            video_data['formats'].sort(key=lambda x: int(re.search(r'\d+', x['quality']).group() if re.search(r'\d+', x['quality']) else 0), reverse=True)
-            
-            # Limit to top 5 qualities
-            video_data['formats'] = video_data['formats'][:5]
+            # Limit to top 6 qualities
+            video_data['formats'] = video_data['formats'][:6]
             
             print(f"Found {len(video_data['formats'])} formats for: {video_data['title']}")
             

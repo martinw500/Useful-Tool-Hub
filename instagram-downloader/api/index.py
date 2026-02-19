@@ -4,12 +4,40 @@ import instaloader
 import requests
 import base64
 import re
+import time
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type"]}})
 
-# Create an Instaloader instance
-L = instaloader.Instaloader()
+def get_instaloader():
+    """Create a fresh Instaloader instance per request to avoid stale sessions"""
+    loader = instaloader.Instaloader(
+        download_video_thumbnails=False,
+        download_geotags=False,
+        download_comments=False,
+        save_metadata=False,
+        compress_json=False,
+        quiet=True,
+        user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+    )
+    return loader
+
+def fetch_post_with_retry(shortcode, max_retries=2):
+    """Fetch Instagram post with retry logic"""
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            L = get_instaloader()
+            post = instaloader.Post.from_shortcode(L.context, shortcode)
+            # Access a property to trigger the actual fetch
+            _ = post.typename
+            return post
+        except Exception as e:
+            last_error = e
+            print(f'Attempt {attempt + 1} failed: {e}')
+            if attempt < max_retries - 1:
+                time.sleep(1)
+    raise last_error
 
 def fetch_image_as_base64(url):
     """Fetch an image and convert to base64 data URL"""
@@ -47,8 +75,8 @@ def get_instagram():
         shortcode = match.group(2)
         print(f'\n=== Fetching Instagram post: {shortcode} ===')
         
-        # Get post using instaloader
-        post = instaloader.Post.from_shortcode(L.context, shortcode)
+        # Fetch post with retry logic
+        post = fetch_post_with_retry(shortcode)
         
         media = []
         

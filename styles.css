@@ -741,6 +741,7 @@ body::before {
 /* Results */
 .results-container {
     display: none;
+    margin-top: 28px;
 }
 
 .results-container.active {
@@ -875,6 +876,8 @@ body::before {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
 }
 
 .results-count {

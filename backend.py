@@ -21,8 +21,35 @@ CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS
 # INSTAGRAM DOWNLOADER
 # =============================================================================
 
-# Create an Instaloader instance
-L = instaloader.Instaloader()
+def get_instaloader():
+    """Create a fresh Instaloader instance per request to avoid stale sessions"""
+    loader = instaloader.Instaloader(
+        download_video_thumbnails=False,
+        download_geotags=False,
+        download_comments=False,
+        save_metadata=False,
+        compress_json=False,
+        quiet=True,
+        user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+    )
+    return loader
+
+def fetch_post_with_retry(shortcode, max_retries=2):
+    """Fetch Instagram post with retry logic"""
+    import time
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            L = get_instaloader()
+            post = instaloader.Post.from_shortcode(L.context, shortcode)
+            _ = post.typename  # trigger actual fetch
+            return post
+        except Exception as e:
+            last_error = e
+            print(f'Attempt {attempt + 1} failed: {e}')
+            if attempt < max_retries - 1:
+                time.sleep(1)
+    raise last_error
 
 def fetch_image_as_base64(url):
     """Fetch an image and convert to base64 data URL"""
@@ -60,8 +87,8 @@ def get_instagram():
         shortcode = match.group(2)
         print(f'\n=== Fetching Instagram post: {shortcode} ===')
         
-        # Get post using instaloader
-        post = instaloader.Post.from_shortcode(L.context, shortcode)
+        # Fetch post with retry logic
+        post = fetch_post_with_retry(shortcode)
         
         media = []
         
@@ -158,11 +185,12 @@ def get_youtube():
         print(f"Cleaned URL to: {url}")
     
     try:
-        # yt-dlp options - keep it simple
+        # yt-dlp options - use defaults for best format discovery
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
             'extract_flat': False,
+            'socket_timeout': 30,
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -279,11 +307,20 @@ def download_youtube():
             'quiet': False,
             'no_warnings': False,
             'merge_output_format': 'mp4',
-            # CRITICAL: Add postprocessor args to fix moov atom position
-            'postprocessor_args': [
-                '-movflags', 'faststart',  # Move metadata to beginning for instant playback
-            ],
+            'socket_timeout': 30,
+            # Fix metadata so video files are playable
+            'postprocessor_args': {
+                'ffmpeg': ['-movflags', 'faststart'],
+            },
             'prefer_ffmpeg': True,
+            'writethumbnail': False,
+            'embedthumbnail': False,
+            'postprocessors': [
+                {
+                    'key': 'FFmpegMetadata',
+                    'add_metadata': True,
+                },
+            ],
         }
         
         print(f"\n{'='*60}")

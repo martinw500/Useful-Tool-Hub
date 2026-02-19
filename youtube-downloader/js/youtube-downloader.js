@@ -62,8 +62,8 @@ async function fetchYouTubeVideo(url) {
         currentVideoData.originalUrl = url;
         displayVideoInfo(data);
     } catch (error) {
-        if (error.message.includes('Failed to fetch')) {
-            showError('Cannot connect to backend server. The server might be temporarily unavailable.');
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            showError('Cannot connect to backend server. Please wait a moment and try again. The server may be starting up (cold start takes ~10s).');
         } else {
             showError(error.message || 'Failed to fetch video information. Please try again.');
         }

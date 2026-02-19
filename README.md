@@ -5,4 +5,54 @@ A collection of useful tools in one place. I got tired of having to search up a 
 Will be updated with more tools as I build them out.
 
 ## Live Website
-**https://martinw500.github.io/Useful-Tool-Hub/**
+**https://martinw500.github.io/UTH/**
+
+## Tools
+- **YouTube Downloader** — Download YouTube videos in multiple formats and qualities
+- **Instagram Downloader** — Save photos and videos from public Instagram posts and reels
+
+## Architecture
+- **Frontend** — Static HTML/CSS/JS hosted on GitHub Pages
+- **Backend** — Python serverless functions on Vercel (Instagram via instaloader, YouTube via yt-dlp)
+- **Local Dev** — Unified Flask backend (`backend.py`) for local testing
+
+## Local Development
+
+### 1. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Start Backend
+```bash
+python backend.py
+```
+Backend runs on `http://localhost:5000`
+
+### 3. Open Frontend
+Open any tool HTML file in your browser. The frontend auto-detects localhost and uses the local backend.
+
+## Project Structure
+```
+├── index.html                  # Homepage
+├── styles.css                  # Global styles
+├── script.js                   # Homepage search/filter
+├── js/config.js                # API URL config (auto-switches local/prod)
+├── backend.py                  # Unified local dev backend
+├── vercel.json                 # Vercel serverless config
+├── requirements.txt            # Python dependencies
+├── feedback.html               # Feedback form
+├── instagram-downloader/
+│   ├── index.html              # Instagram tool UI
+│   ├── troubleshooting.html    # Help page
+│   ├── js/instagram-downloader.js
+│   └── api/index.py            # Vercel serverless function
+├── youtube-downloader/
+│   ├── index.html              # YouTube tool UI
+│   ├── js/youtube-downloader.js
+│   └── api/index.py            # Vercel serverless function
+```
+
+## Deployment
+- Push to `main` → GitHub Pages auto-deploys the frontend
+- Push to `main` → Vercel auto-deploys the backend functions
