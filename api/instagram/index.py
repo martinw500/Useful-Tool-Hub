@@ -153,29 +153,3 @@ def get_instagram():
     except Exception as e:
         print(f'Error: {type(e).__name__}: {str(e)}')
         return jsonify({'error': f'Server error: {str(e)}'}), 500
-
-@app.route('/api/proxy-image', methods=['GET'])
-def proxy_image():
-    """Proxy Instagram images to avoid CORS issues"""
-    image_url = request.args.get('url')
-    if not image_url:
-        return jsonify({'error': 'URL parameter required'}), 400
-    
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Referer': 'https://www.instagram.com/',
-        }
-        
-        response = requests.get(image_url, headers=headers, stream=True, timeout=10)
-        
-        if response.status_code == 200:
-            return response.content, 200, {
-                'Content-Type': response.headers.get('Content-Type', 'image/jpeg'),
-                'Cache-Control': 'public, max-age=3600',
-            }
-        else:
-            return jsonify({'error': 'Failed to fetch image'}), response.status_code
-            
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500

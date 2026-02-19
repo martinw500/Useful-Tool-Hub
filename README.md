@@ -42,15 +42,16 @@ Open any tool HTML file in your browser. The frontend auto-detects localhost and
 ├── vercel.json                 # Vercel serverless config
 ├── requirements.txt            # Python dependencies
 ├── feedback.html               # Feedback form
+├── api/
+│   ├── instagram/index.py      # Vercel serverless function (instaloader)
+│   └── youtube/index.py        # Vercel serverless function (yt-dlp)
 ├── instagram-downloader/
 │   ├── index.html              # Instagram tool UI
 │   ├── troubleshooting.html    # Help page
-│   ├── js/instagram-downloader.js
-│   └── api/index.py            # Vercel serverless function
+│   └── js/instagram-downloader.js
 ├── youtube-downloader/
 │   ├── index.html              # YouTube tool UI
-│   ├── js/youtube-downloader.js
-│   └── api/index.py            # Vercel serverless function
+│   └── js/youtube-downloader.js
 ```
 
 ## Deployment

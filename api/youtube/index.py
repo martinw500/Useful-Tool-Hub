@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import yt_dlp
 import re
-import sys
 import traceback
 
 app = Flask(__name__)
@@ -19,12 +18,10 @@ def get_ydl_opts():
 
 @app.route('/api/youtube', methods=['GET', 'OPTIONS'])
 def get_youtube():
-    # Handle preflight OPTIONS request
     if request.method == 'OPTIONS':
         return '', 204
     
     url = request.args.get('url')
-    
     if not url:
         return jsonify({'error': 'URL parameter required'}), 400
     
@@ -40,7 +37,6 @@ def get_youtube():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             
-            # Get video information
             video_data = {
                 'success': True,
                 'title': info.get('title', 'Unknown'),
@@ -51,14 +47,10 @@ def get_youtube():
                 'formats': []
             }
             
-            # Filter and sort formats
             formats = info.get('formats', [])
-            
-            # Collect best format per quality level
             quality_map = {}
             
             for fmt in formats:
-                # Skip audio-only formats
                 if fmt.get('vcodec') == 'none':
                     continue
                 
@@ -69,7 +61,6 @@ def get_youtube():
                 quality_label = f"{height}p"
                 has_audio = fmt.get('acodec') != 'none'
                 
-                # Prefer formats with audio included
                 if quality_label not in quality_map or (has_audio and not quality_map[quality_label].get('has_audio', False)):
                     filesize = fmt.get('filesize') or fmt.get('filesize_approx')
                     if filesize and filesize > 0:
@@ -96,22 +87,76 @@ def get_youtube():
                         'height': height
                     }
             
-            # Convert to sorted list
             video_data['formats'] = sorted(quality_map.values(), key=lambda x: x['height'], reverse=True)
-            
-            # Limit to top 6 qualities
             video_data['formats'] = video_data['formats'][:6]
-            
-            print(f"Found {len(video_data['formats'])} formats for: {video_data['title']}")
             
             return jsonify(video_data)
         
     except Exception as e:
-        error_msg = f'{type(e).__name__}: {str(e)}'
-        print(f'Error: {error_msg}')
+        print(f'Error: {type(e).__name__}: {str(e)}')
         print(f'Traceback: {traceback.format_exc()}')
         return jsonify({
             'error': f'Failed to fetch video: {str(e)}',
-            'error_type': type(e).__name__,
-            'traceback': traceback.format_exc()
+            'error_type': type(e).__name__
         }), 500
+
+@app.route('/api/youtube/download', methods=['GET', 'OPTIONS'])
+def download_youtube():
+    """Download YouTube video using yt-dlp and stream to client"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    video_url = request.args.get('url')
+    quality = request.args.get('quality', '360p')
+    filename = request.args.get('filename', 'video.mp4')
+    
+    if not video_url:
+        return jsonify({'error': 'URL parameter required'}), 400
+    
+    try:
+        from flask import Response, send_file
+        import tempfile
+        import os
+        
+        video_id_match = re.search(r'(?:v=|/)([a-zA-Z0-9_-]{11})', video_url)
+        if video_id_match:
+            video_id = video_id_match.group(1)
+            video_url = f'https://www.youtube.com/watch?v={video_id}'
+        
+        height = quality.replace('p', '')
+        format_string = f'bestvideo[height<={height}]+bestaudio/best[height<={height}]'
+        
+        temp_dir = tempfile.mkdtemp()
+        output_path = os.path.join(temp_dir, 'video.%(ext)s')
+        
+        ydl_opts = {
+            'format': format_string,
+            'outtmpl': output_path,
+            'quiet': True,
+            'no_warnings': True,
+            'merge_output_format': 'mp4',
+            'socket_timeout': 30,
+        }
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([video_url])
+        
+        downloaded_files = [f for f in os.listdir(temp_dir) if f.startswith('video.')]
+        if not downloaded_files:
+            raise Exception('No file was downloaded')
+        
+        downloaded_file = os.path.join(temp_dir, downloaded_files[0])
+        if os.path.getsize(downloaded_file) == 0:
+            raise Exception('Downloaded file is empty')
+        
+        return send_file(
+            downloaded_file,
+            mimetype='video/mp4',
+            as_attachment=True,
+            download_name=filename
+        )
+            
+    except Exception as e:
+        print(f'Download error: {str(e)}')
+        print(f'Traceback: {traceback.format_exc()}')
+        return jsonify({'error': f'Download failed: {str(e)}'}), 500

@@ -4,7 +4,3 @@ test_*.py
 .venv/
 __pycache__/
 *.pyc
-
-# Old API directories (kept for local dev, not needed on Vercel)
-instagram-downloader/api/
-youtube-downloader/api/
