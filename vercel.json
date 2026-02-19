@@ -16,14 +16,6 @@
       }
     }
   ],
-  "functions": {
-    "instagram-downloader/api/index.py": {
-      "maxDuration": 60
-    },
-    "youtube-downloader/api/index.py": {
-      "maxDuration": 60
-    }
-  },
   "routes": [
     {
       "src": "/api/instagram(.*)",
