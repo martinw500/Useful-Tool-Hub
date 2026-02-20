@@ -43,11 +43,153 @@ def fetch_image_as_base64(url):
     return None
 
 
-# ── Fallback: Instagram oEmbed API ────────────────────────────────
+# ── Fallback 1: Instagram embed page scraping ─────────────────────
+def fetch_via_embed_page(shortcode):
+    """Scrape the Instagram embed page for all carousel media.
+    The embed page is less aggressively rate-limited than the GraphQL API
+    and contains data for all items in a carousel post."""
+    import json as _json
+
+    embed_url = f'https://www.instagram.com/p/{shortcode}/embed/captioned/'
+    print(f'Trying embed page fallback: {embed_url}')
+
+    resp = requests.get(embed_url, headers={
+        **BROWSER_HEADERS,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    }, timeout=15)
+
+    if resp.status_code != 200:
+        print(f'Embed page returned {resp.status_code}')
+        return None
+
+    html = resp.text
+    media = []
+
+    # Strategy 1: Extract JSON data from the embedded script
+    # Look for window.__additionalDataLoaded or similar JSON blobs
+    json_patterns = [
+        r'window\.__additionalDataLoaded\s*\(\s*[\'"][^\'"]*[\'"]\s*,\s*({.+?})\s*\)\s*;',
+        r'"gql_data"\s*:\s*({.+?"shortcode_media".+?})\s*[,}]',
+    ]
+
+    post_data = None
+    for pattern in json_patterns:
+        m = re.search(pattern, html, re.DOTALL)
+        if m:
+            try:
+                post_data = _json.loads(m.group(1))
+                print(f'Found JSON data via pattern')
+                break
+            except _json.JSONDecodeError:
+                continue
+
+    if post_data:
+        # Navigate to the shortcode_media object
+        shortcode_media = None
+        if 'shortcode_media' in post_data:
+            shortcode_media = post_data['shortcode_media']
+        elif 'graphql' in post_data and 'shortcode_media' in post_data.get('graphql', {}):
+            shortcode_media = post_data['graphql']['shortcode_media']
+
+        if shortcode_media:
+            # Check for carousel (sidecar)
+            sidecar = shortcode_media.get('edge_sidecar_to_children', {})
+            edges = sidecar.get('edges', [])
+
+            if edges:
+                print(f'Found carousel with {len(edges)} items in embed data')
+                for i, edge in enumerate(edges):
+                    node = edge.get('node', {})
+                    is_video = node.get('is_video', False)
+                    display_url = node.get('display_url', '')
+
+                    if not display_url:
+                        continue
+
+                    thumbnail_base64 = fetch_image_as_base64(display_url)
+
+                    if is_video:
+                        video_url = node.get('video_url', display_url)
+                        media.append({
+                            'type': 'video',
+                            'url_high': video_url,
+                            'url_low': video_url,
+                            'thumbnail': thumbnail_base64 or display_url
+                        })
+                    else:
+                        media.append({
+                            'type': 'image',
+                            'url_high': display_url,
+                            'url_low': display_url,
+                            'thumbnail': thumbnail_base64 or display_url
+                        })
+            else:
+                # Single post from JSON
+                is_video = shortcode_media.get('is_video', False)
+                display_url = shortcode_media.get('display_url', '')
+                if display_url:
+                    thumbnail_base64 = fetch_image_as_base64(display_url)
+                    if is_video:
+                        video_url = shortcode_media.get('video_url', display_url)
+                        media.append({
+                            'type': 'video',
+                            'url_high': video_url,
+                            'url_low': video_url,
+                            'thumbnail': thumbnail_base64 or display_url
+                        })
+                    else:
+                        media.append({
+                            'type': 'image',
+                            'url_high': display_url,
+                            'url_low': display_url,
+                            'thumbnail': thumbnail_base64 or display_url
+                        })
+
+    # Strategy 2: If JSON parsing didn't work, try scraping image URLs from HTML
+    if not media:
+        # Look for high-res image URLs in the embed HTML (Instagram CDN pattern)
+        img_urls = re.findall(
+            r'(?:src|srcset|data-src)=["\']'
+            r'(https://(?:scontent|instagram)[^"\']+?\.(?:jpg|jpeg|png|webp)[^"\']*)',
+            html, re.IGNORECASE
+        )
+        # Deduplicate while preserving order
+        seen = set()
+        unique_urls = []
+        for u in img_urls:
+            # Normalize by removing size params for dedup
+            norm = re.sub(r'&?se=\d+', '', u)
+            if norm not in seen:
+                seen.add(norm)
+                unique_urls.append(u)
+
+        # Filter out tiny profile pics / icons (they usually have s150x150 or similar)
+        full_urls = [u for u in unique_urls if not re.search(r's\d{2,3}x\d{2,3}', u)]
+        if not full_urls:
+            full_urls = unique_urls
+
+        if full_urls:
+            print(f'Found {len(full_urls)} images via HTML scraping')
+            for img_url in full_urls:
+                thumbnail_base64 = fetch_image_as_base64(img_url)
+                if thumbnail_base64:
+                    media.append({
+                        'type': 'image',
+                        'url_high': img_url,
+                        'url_low': img_url,
+                        'thumbnail': thumbnail_base64
+                    })
+
+    if media:
+        return media
+    return None
+
+
+# ── Fallback 2: Instagram oEmbed API ─────────────────────────────
 def fetch_via_oembed(shortcode):
-    """Fallback: use Instagram's oEmbed API for a thumbnail.
+    """Last-resort fallback: use Instagram's oEmbed API for a thumbnail.
     Only returns the first image (no carousel/video support) but works
-    when the GraphQL API is rate-limited on cloud IPs."""
+    when everything else is rate-limited on cloud IPs."""
     post_url = f'https://www.instagram.com/p/{shortcode}/'
     oembed_url = f'https://i.instagram.com/api/v1/oembed/?url={post_url}'
     print(f'Trying oEmbed fallback: {oembed_url}')
@@ -165,9 +307,18 @@ def get_instagram():
             print(f'=== Instaloader success: {len(media)} items ===\n')
             return jsonify({'success': True, 'media': media})
     except Exception as e:
-        print(f'Instaloader failed, trying embed fallback: {e}')
+        print(f'Instaloader failed, trying embed page fallback: {e}')
     
-    # 2) Fallback to oEmbed API (limited: first image only, no video)
+    # 2) Try embed page scraping (carousel support, less rate-limited)
+    try:
+        media = fetch_via_embed_page(shortcode)
+        if media:
+            print(f'=== Embed page fallback success: {len(media)} items ===\n')
+            return jsonify({'success': True, 'media': media})
+    except Exception as e:
+        print(f'Embed page fallback failed, trying oEmbed: {e}')
+    
+    # 3) Last resort: oEmbed API (first image only, no video)
     try:
         media = fetch_via_oembed(shortcode)
         if media:
