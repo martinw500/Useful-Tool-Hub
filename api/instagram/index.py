@@ -9,6 +9,14 @@ import time
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"], "allow_headers": ["Content-Type"]}})
 
+BROWSER_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Referer': 'https://www.instagram.com/',
+    'Origin': 'https://www.instagram.com',
+}
+
 def get_instaloader():
     """Create a fresh Instaloader instance per request to avoid stale sessions"""
     loader = instaloader.Instaloader(
@@ -18,35 +26,14 @@ def get_instaloader():
         save_metadata=False,
         compress_json=False,
         quiet=True,
-        user_agent='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+        user_agent=BROWSER_HEADERS['User-Agent']
     )
     return loader
-
-def fetch_post_with_retry(shortcode, max_retries=2):
-    """Fetch Instagram post with retry logic"""
-    last_error = None
-    for attempt in range(max_retries):
-        try:
-            L = get_instaloader()
-            post = instaloader.Post.from_shortcode(L.context, shortcode)
-            # Access a property to trigger the actual fetch
-            _ = post.typename
-            return post
-        except Exception as e:
-            last_error = e
-            print(f'Attempt {attempt + 1} failed: {e}')
-            if attempt < max_retries - 1:
-                time.sleep(1)
-    raise last_error
 
 def fetch_image_as_base64(url):
     """Fetch an image and convert to base64 data URL"""
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Referer': 'https://www.instagram.com/',
-        }
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=BROWSER_HEADERS, timeout=10)
         if response.status_code == 200:
             content_type = response.headers.get('Content-Type', 'image/jpeg')
             base64_data = base64.b64encode(response.content).decode('utf-8')
@@ -55,101 +42,140 @@ def fetch_image_as_base64(url):
         print(f'Failed to fetch image as base64: {e}')
     return None
 
+
+# ── Fallback: Instagram oEmbed API ────────────────────────────────
+def fetch_via_oembed(shortcode):
+    """Fallback: use Instagram's oEmbed API for a thumbnail.
+    Only returns the first image (no carousel/video support) but works
+    when the GraphQL API is rate-limited on cloud IPs."""
+    post_url = f'https://www.instagram.com/p/{shortcode}/'
+    oembed_url = f'https://i.instagram.com/api/v1/oembed/?url={post_url}'
+    print(f'Trying oEmbed fallback: {oembed_url}')
+
+    resp = requests.get(oembed_url, headers={
+        'User-Agent': BROWSER_HEADERS['User-Agent'],
+        'Accept': 'application/json',
+    }, timeout=10)
+
+    if resp.status_code != 200:
+        print(f'oEmbed returned {resp.status_code}')
+        return None
+
+    data = resp.json()
+    thumbnail_url = data.get('thumbnail_url')
+    if not thumbnail_url:
+        return None
+
+    print(f'oEmbed thumbnail: {thumbnail_url[:80]}...')
+    thumbnail_base64 = fetch_image_as_base64(thumbnail_url)
+
+    if not thumbnail_base64:
+        return None
+
+    return [{
+        'type': 'image',
+        'url_high': thumbnail_url,
+        'url_low': thumbnail_url,
+        'thumbnail': thumbnail_base64
+    }]
+
+
+# ── Primary: instaloader approach ──────────────────────────────────
+def fetch_via_instaloader(shortcode):
+    """Primary approach using instaloader's GraphQL queries."""
+    last_error = None
+    for attempt in range(2):
+        try:
+            L = get_instaloader()
+            post = instaloader.Post.from_shortcode(L.context, shortcode)
+            _ = post.typename  # trigger actual fetch
+            
+            media = []
+            
+            if post.typename == 'GraphSidecar':
+                print(f'Found carousel with {post.mediacount} items')
+                for i, node in enumerate(post.get_sidecar_nodes()):
+                    display_url = node.display_url
+                    thumbnail_base64 = fetch_image_as_base64(display_url)
+                    if node.is_video:
+                        media.append({
+                            'type': 'video',
+                            'url_high': node.video_url,
+                            'url_low': node.video_url,
+                            'thumbnail': thumbnail_base64 or display_url
+                        })
+                    else:
+                        media.append({
+                            'type': 'image',
+                            'url_high': display_url,
+                            'url_low': display_url,
+                            'thumbnail': thumbnail_base64 or display_url
+                        })
+            elif post.typename == 'GraphImage':
+                img_url = post.url
+                thumbnail_base64 = fetch_image_as_base64(img_url)
+                media.append({
+                    'type': 'image',
+                    'url_high': img_url,
+                    'url_low': img_url,
+                    'thumbnail': thumbnail_base64 or img_url
+                })
+            elif post.typename == 'GraphVideo':
+                video_url = post.video_url
+                thumbnail_base64 = fetch_image_as_base64(post.url)
+                media.append({
+                    'type': 'video',
+                    'url_high': video_url,
+                    'url_low': video_url,
+                    'thumbnail': thumbnail_base64 or post.url
+                })
+            
+            if media:
+                return media
+            return None
+            
+        except Exception as e:
+            last_error = e
+            print(f'Instaloader attempt {attempt + 1} failed: {e}')
+            if attempt < 1:
+                time.sleep(1)
+    
+    raise last_error
+
 @app.route('/api/instagram', methods=['GET', 'OPTIONS'])
 def get_instagram():
-    # Handle preflight OPTIONS request
     if request.method == 'OPTIONS':
         return '', 204
     
     url = request.args.get('url')
-    
     if not url:
         return jsonify({'error': 'URL parameter required'}), 400
     
+    match = re.search(r'/(p|reel)/([A-Za-z0-9_-]+)', url)
+    if not match:
+        return jsonify({'error': 'Invalid Instagram URL'}), 400
+    
+    shortcode = match.group(2)
+    print(f'\n=== Fetching Instagram post: {shortcode} ===')
+    
+    # 1) Try instaloader (full quality, carousel support)
     try:
-        # Extract shortcode from URL
-        match = re.search(r'/(p|reel)/([A-Za-z0-9_-]+)', url)
-        if not match:
-            return jsonify({'error': 'Invalid Instagram URL'}), 400
-        
-        shortcode = match.group(2)
-        print(f'\n=== Fetching Instagram post: {shortcode} ===')
-        
-        # Fetch post with retry logic
-        post = fetch_post_with_retry(shortcode)
-        
-        media = []
-        
-        # Check if it's a sidecar (carousel/album)
-        if post.typename == 'GraphSidecar':
-            print(f'Found carousel with {post.mediacount} items')
-            
-            # Get all items in the carousel
-            for i, node in enumerate(post.get_sidecar_nodes()):
-                display_url = node.display_url
-                
-                # Fetch image as base64 to avoid CORS
-                thumbnail_base64 = fetch_image_as_base64(display_url)
-                
-                if node.is_video:
-                    video_url = node.video_url
-                    print(f'  [{i+1}] Video: {video_url[:80]}...')
-                    media.append({
-                        'type': 'video',
-                        'url_high': video_url,
-                        'url_low': video_url,
-                        'thumbnail': thumbnail_base64 or display_url
-                    })
-                else:
-                    print(f'  [{i+1}] Image: {display_url[:80]}...')
-                    media.append({
-                        'type': 'image',
-                        'url_high': display_url,
-                        'url_low': display_url,
-                        'thumbnail': thumbnail_base64 or display_url
-                    })
-        
-        # Single image post
-        elif post.typename == 'GraphImage':
-            img_url = post.url
-            print(f'Single image: {img_url[:80]}...')
-            
-            thumbnail_base64 = fetch_image_as_base64(img_url)
-            
-            media.append({
-                'type': 'image',
-                'url_high': img_url,
-                'url_low': img_url,
-                'thumbnail': thumbnail_base64 or img_url
-            })
-        
-        # Single video post
-        elif post.typename == 'GraphVideo':
-            video_url = post.video_url
-            print(f'Single video: {video_url[:80]}...')
-            
-            thumbnail_base64 = fetch_image_as_base64(post.url)
-            
-            media.append({
-                'type': 'video',
-                'url_high': video_url,
-                'url_low': video_url,
-                'thumbnail': thumbnail_base64 or post.url
-            })
-        
-        print(f'\n=== Total media found: {len(media)} ===\n')
-        
-        if not media:
-            return jsonify({'error': 'No media found in post'}), 404
-        
-        return jsonify({
-            'success': True,
-            'media': media
-        })
-        
-    except instaloader.exceptions.InstaloaderException as e:
-        print(f'Instaloader error: {e}')
-        return jsonify({'error': f'Failed to fetch Instagram post: {str(e)}'}), 500
+        media = fetch_via_instaloader(shortcode)
+        if media:
+            print(f'=== Instaloader success: {len(media)} items ===\n')
+            return jsonify({'success': True, 'media': media})
     except Exception as e:
-        print(f'Error: {type(e).__name__}: {str(e)}')
-        return jsonify({'error': f'Server error: {str(e)}'}), 500
+        print(f'Instaloader failed, trying embed fallback: {e}')
+    
+    # 2) Fallback to oEmbed API (limited: first image only, no video)
+    try:
+        media = fetch_via_oembed(shortcode)
+        if media:
+            print(f'=== oEmbed fallback success: {len(media)} items ===\n')
+            return jsonify({'success': True, 'media': media})
+    except Exception as e:
+        print(f'oEmbed fallback also failed: {e}')
+    
+    return jsonify({
+        'error': 'Could not retrieve media from this Instagram post. Instagram may be blocking requests. Please try again in a few minutes.'
+    }), 502
